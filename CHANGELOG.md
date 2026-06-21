@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-06-22
+
+### Added
+
+- `animatedWebPInterval` on `ItemGridConfiguration` (default `4`) to play animated WebP only at every Nth grid index (`0`, `4`, `8`, …). Set to `1` to animate every eligible item.
+
+### Documentation
+
+- README and DocC updated with `animatedWebPInterval` usage notes.
+
+### Tests
+
+- Added coverage for default `animatedWebPInterval`, interval gating logic, and static poster playback when animation is skipped.
+
 ## [1.7.0] - 2026-06-22
 
 ### Added

@@ -8,7 +8,7 @@ A Swift Package that embeds a high-performance UIKit collection view inside Swif
 - **Category tabs** — Horizontal category picker with per-category scroll position restoration.
 - **Customizable UI** — Configure category tab styles (normal/selected), spacing, grid layout (columns, insets, corner radius, aspect ratio), and container background colors.
 - **Bidirectional pagination** — Load more items when scrolling down; load previous pages when scrolling up.
-- **Image loading** — Memory + disk cache keyed by item ID with ImageIO downsampling, concurrent download limits, and optional animated WebP playback.
+- **Image loading** — Memory + disk cache keyed by item ID with ImageIO downsampling, concurrent download limits, optional animated WebP playback, and configurable animation interval.
 - **Zero third-party dependencies** — UIKit, SwiftUI, ImageIO, and CryptoKit only.
 
 ## Requirements
@@ -30,7 +30,7 @@ Or add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.7.0"),
+    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.8.0"),
 ],
 targets: [
     .target(
@@ -261,6 +261,8 @@ Thumbnails are cached in memory and on disk by `itemID`, not `imageURL`. Provide
 
 Set `isAnimatedWebP` to `true` on items whose `imageURL` is an animated WebP. The library decodes all frames (downsampled to 300px max), caches the raw file on disk, and plays the animation in the grid cell. Omit the property or leave it `false` for static images (including static WebP) to keep the lightweight single-frame decode path.
 
+By default, `ItemGridConfiguration.animatedWebPInterval` is `4`, so only items at grid indices `0`, `4`, `8`, … play animation when `isAnimatedWebP` is `true`. Other eligible items show the poster frame only. Set `animatedWebPInterval` to `1` to animate every eligible item.
+
 Animation pauses when a cell scrolls off screen and resumes when it becomes visible again, reducing CPU use while scrolling.
 
 ```swift
@@ -270,6 +272,9 @@ struct MyItem: ItemDisplayable {
     let imageURL: URL
     var isAnimatedWebP: Bool { true }
 }
+
+var gridConfiguration = ItemGridConfiguration.default
+gridConfiguration.animatedWebPInterval = 1 // animate every eligible item
 ```
 
 ## Public API
@@ -282,7 +287,7 @@ struct MyItem: ItemDisplayable {
 | `ItemOverlayConfiguration` | Factory + updater for a custom UIKit overlay on each item. Pass `stateVersion` to refresh visible overlays when external overlay state changes. |
 | `CategoryItemStyle` | Appearance for one category tab state (colors, font, corner radius, content insets). |
 | `CategoryHeaderConfiguration` | Category tab bar styling: normal/selected styles, spacing, section insets, header height. |
-| `ItemGridConfiguration` | Grid layout and cell appearance: column counts, spacing, content insets, corner radius, item aspect ratio. |
+| `ItemGridConfiguration` | Grid layout and cell appearance: column counts, spacing, content insets, corner radius, item aspect ratio, animated WebP interval. |
 | `ItemAspectRatio` | Presets for global item height relative to width (`square`, `portrait4x3`, `landscape16x9`, `custom`). |
 | `CategoryItemBackgroundConfiguration` | Container background colors for the view controller, header bar, and grid canvas. |
 | `CategoryLeadingSlot` | UIKit hook for a leading category tab with custom content instead of the grid. |

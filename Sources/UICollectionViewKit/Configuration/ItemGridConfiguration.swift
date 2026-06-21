@@ -30,6 +30,8 @@ public struct ItemGridConfiguration: Sendable {
     public var imageBackgroundColor: UIColor
     /// Cell height as a multiple of cell width. Default `1.0` produces square cells.
     public var itemHeightMultiplier: CGFloat
+    /// When an item has `isAnimatedWebP == true`, only indices divisible by this value play animation. Default `4`. Set to `1` to animate every eligible item.
+    public var animatedWebPInterval: Int
 
     public init(
         columnCountPhone: Int,
@@ -39,7 +41,8 @@ public struct ItemGridConfiguration: Sendable {
         contentInsets: NSDirectionalEdgeInsets,
         cornerRadius: CGFloat,
         imageBackgroundColor: UIColor,
-        itemHeightMultiplier: CGFloat = 1.0
+        itemHeightMultiplier: CGFloat = 1.0,
+        animatedWebPInterval: Int = 4
     ) {
         self.columnCountPhone = columnCountPhone
         self.columnCountPad = columnCountPad
@@ -49,6 +52,13 @@ public struct ItemGridConfiguration: Sendable {
         self.cornerRadius = cornerRadius
         self.imageBackgroundColor = imageBackgroundColor
         self.itemHeightMultiplier = itemHeightMultiplier
+        self.animatedWebPInterval = animatedWebPInterval
+    }
+
+    func shouldPlayAnimatedWebP(itemSupportsAnimation: Bool, itemIndex: Int) -> Bool {
+        guard itemSupportsAnimation else { return false }
+        guard animatedWebPInterval > 1 else { return true }
+        return itemIndex % animatedWebPInterval == 0
     }
 }
 

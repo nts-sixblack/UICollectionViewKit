@@ -19,6 +19,34 @@ final class UICollectionViewKitTests: XCTestCase {
         XCTAssertFalse(item.isAnimatedWebP)
     }
 
+    func testItemGridConfigurationDefaultAnimatedWebPIntervalIsFour() {
+        XCTAssertEqual(ItemGridConfiguration.default.animatedWebPInterval, 4)
+    }
+
+    func testShouldPlayAnimatedWebPWithIntervalFour() {
+        var configuration = ItemGridConfiguration.default
+
+        XCTAssertFalse(configuration.shouldPlayAnimatedWebP(itemSupportsAnimation: false, itemIndex: 0))
+        XCTAssertFalse(configuration.shouldPlayAnimatedWebP(itemSupportsAnimation: false, itemIndex: 4))
+
+        XCTAssertTrue(configuration.shouldPlayAnimatedWebP(itemSupportsAnimation: true, itemIndex: 0))
+        XCTAssertTrue(configuration.shouldPlayAnimatedWebP(itemSupportsAnimation: true, itemIndex: 4))
+        XCTAssertTrue(configuration.shouldPlayAnimatedWebP(itemSupportsAnimation: true, itemIndex: 8))
+
+        XCTAssertFalse(configuration.shouldPlayAnimatedWebP(itemSupportsAnimation: true, itemIndex: 1))
+        XCTAssertFalse(configuration.shouldPlayAnimatedWebP(itemSupportsAnimation: true, itemIndex: 2))
+        XCTAssertFalse(configuration.shouldPlayAnimatedWebP(itemSupportsAnimation: true, itemIndex: 3))
+    }
+
+    func testShouldPlayAnimatedWebPWithIntervalOne() {
+        var configuration = ItemGridConfiguration.default
+        configuration.animatedWebPInterval = 1
+
+        XCTAssertTrue(configuration.shouldPlayAnimatedWebP(itemSupportsAnimation: true, itemIndex: 0))
+        XCTAssertTrue(configuration.shouldPlayAnimatedWebP(itemSupportsAnimation: true, itemIndex: 1))
+        XCTAssertTrue(configuration.shouldPlayAnimatedWebP(itemSupportsAnimation: true, itemIndex: 7))
+    }
+
     func testItemDisplayableConformance() {
         struct TestItem: ItemDisplayable {
             let itemID: String
@@ -551,6 +579,48 @@ final class UICollectionViewKitTests: XCTestCase {
         XCTAssertTrue(cell.hasActiveAnimatedPlayback)
 
         cell.prepareForReuse()
+        XCTAssertFalse(cell.hasActiveAnimatedPlayback)
+    }
+
+    @MainActor
+    func testItemImageCellDoesNotAnimateWhenPlaybackDisabled() async throws {
+        let itemID = "animated-cell-static-\(UUID().uuidString)"
+        let sourceURL = try makeTestAnimatedGIFFile()
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+
+        guard case let .animated(sequence)? = ImageDownsampler.loadedImage(fromFileAt: sourceURL, isAnimatedWebP: true) else {
+            XCTFail("Expected animated loaded image")
+            return
+        }
+
+        await PersistentImageCache.shared.storeDownloadedFile(
+            from: sourceURL,
+            loadedImage: .animated(sequence),
+            for: itemID
+        )
+
+        struct AnimatedTestItem: ItemDisplayable {
+            let itemID: String
+            let categoryID: String
+            let imageURL: URL
+            var isAnimatedWebP: Bool { true }
+        }
+
+        let item = AnimatedTestItem(
+            itemID: itemID,
+            categoryID: "nature",
+            imageURL: sourceURL
+        )
+
+        let cell = ItemImageCell(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        cell.configure(
+            with: sourceURL,
+            isAnimatedWebP: false,
+            overlayConfiguration: nil as ItemOverlayConfiguration<AnimatedTestItem>?,
+            item: item,
+            appearance: .default
+        )
+
         XCTAssertFalse(cell.hasActiveAnimatedPlayback)
     }
 }

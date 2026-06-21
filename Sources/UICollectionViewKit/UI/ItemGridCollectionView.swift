@@ -89,7 +89,10 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
             }
             cell.configure(
                 with: item.imageURL,
-                isAnimatedWebP: item.isAnimatedWebP,
+                isAnimatedWebP: self.configuration.shouldPlayAnimatedWebP(
+                    itemSupportsAnimation: item.isAnimatedWebP,
+                    itemIndex: indexPath.item
+                ),
                 overlayConfiguration: self.itemOverlayConfiguration,
                 item: item,
                 appearance: self.configuration
@@ -118,6 +121,7 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
 
         let appearanceChanged = self.configuration.cornerRadius != configuration.cornerRadius
             || self.configuration.imageBackgroundColor != configuration.imageBackgroundColor
+            || self.configuration.animatedWebPInterval != configuration.animatedWebPInterval
 
         self.configuration = configuration
 
@@ -227,7 +231,10 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
 
             cell.configure(
                 with: item.imageURL,
-                isAnimatedWebP: item.isAnimatedWebP,
+                isAnimatedWebP: configuration.shouldPlayAnimatedWebP(
+                    itemSupportsAnimation: item.isAnimatedWebP,
+                    itemIndex: indexPath.item
+                ),
                 overlayConfiguration: itemOverlayConfiguration,
                 item: item,
                 appearance: configuration
@@ -245,7 +252,10 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
 
             cell.configure(
                 with: item.imageURL,
-                isAnimatedWebP: item.isAnimatedWebP,
+                isAnimatedWebP: configuration.shouldPlayAnimatedWebP(
+                    itemSupportsAnimation: item.isAnimatedWebP,
+                    itemIndex: indexPath.item
+                ),
                 overlayConfiguration: itemOverlayConfiguration,
                 item: item,
                 appearance: configuration

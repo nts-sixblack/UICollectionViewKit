@@ -10,7 +10,9 @@ Images are cached in memory and on disk by ``ItemDisplayable/itemID``, not by ``
 
 Set ``ItemDisplayable/isAnimatedWebP`` to `true` on items whose URL is an animated WebP file. The library decodes downsampled frames, plays the animation in the grid cell, and pauses playback when the cell scrolls off screen. Defaults to `false` for static images.
 
-Customize category tab appearance with ``CategoryHeaderConfiguration`` (normal vs selected pill styles, spacing, insets, header height) and the item grid with ``ItemGridConfiguration`` (column counts, spacing, content insets, corner radius, item aspect ratio). Use ``CategoryItemBackgroundConfiguration`` for container background colors. Omit all to keep the built-in defaults.
+Use ``ItemGridConfiguration/animatedWebPInterval`` (default `4`) to limit animated playback to every Nth grid index (`0`, `4`, `8`, …). Set it to `1` to animate every eligible item.
+
+Customize category tab appearance with ``CategoryHeaderConfiguration`` (normal vs selected pill styles, spacing, insets, header height) and the item grid with ``ItemGridConfiguration`` (column counts, spacing, content insets, corner radius, item aspect ratio, animated WebP interval). Use ``CategoryItemBackgroundConfiguration`` for container background colors. Omit all to keep the built-in defaults.
 
 ## Topics
 
@@ -49,7 +51,7 @@ For UIKit-only integration, call ``CategoryItemViewController/reloadVisibleItemO
 
 ### UI Configuration
 
-Use ``CategoryHeaderConfiguration`` to customize category tab appearance (normal vs selected styles, spacing, insets, header height), ``ItemGridConfiguration`` for grid columns, spacing, insets, cell corner radius, and item aspect ratio, and ``CategoryItemBackgroundConfiguration`` for container background colors. All default to the built-in styling when omitted.
+Use ``CategoryHeaderConfiguration`` to customize category tab appearance (normal vs selected styles, spacing, insets, header height), ``ItemGridConfiguration`` for grid columns, spacing, insets, cell corner radius, item aspect ratio, and animated WebP interval, and ``CategoryItemBackgroundConfiguration`` for container background colors. All default to the built-in styling when omitted.
 
 ```swift
 var gridConfiguration = ItemGridConfiguration(
