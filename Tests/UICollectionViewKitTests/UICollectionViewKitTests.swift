@@ -113,10 +113,20 @@ final class UICollectionViewKitTests: XCTestCase {
             imageURL: URL(string: "https://example.com/2.jpg")!
         )
 
-        cell.configure(with: item1.imageURL, overlayConfiguration: configuration, item: item1)
+        cell.configure(
+            with: item1.imageURL,
+            overlayConfiguration: configuration,
+            item: item1,
+            appearance: .default
+        )
         XCTAssertEqual(makeViewCallCount, 1)
 
-        cell.configure(with: item2.imageURL, overlayConfiguration: configuration, item: item2)
+        cell.configure(
+            with: item2.imageURL,
+            overlayConfiguration: configuration,
+            item: item2,
+            appearance: .default
+        )
         XCTAssertEqual(makeViewCallCount, 1)
     }
 
@@ -194,4 +204,81 @@ final class UICollectionViewKitTests: XCTestCase {
         )
         XCTAssertEqual(updateCallCount, countAfterFirstReload)
     }
+
+    func testDefaultHeaderConfigurationMatchesLegacyValues() {
+        let configuration = CategoryHeaderConfiguration.default
+
+        XCTAssertEqual(configuration.itemSpacing, 8)
+        XCTAssertEqual(configuration.lineSpacing, 8)
+        XCTAssertEqual(configuration.headerHeight, 52)
+        XCTAssertEqual(configuration.sectionInsets.leading, 16)
+        XCTAssertEqual(configuration.normalStyle.cornerRadius, 16)
+        XCTAssertEqual(configuration.selectedStyle.contentInsets.top, 8)
+    }
+
+    @MainActor
+    func testGridLayoutMetricsUseConfiguration() {
+        var configuration = ItemGridConfiguration.default
+        configuration.columnCountPhone = 4
+        configuration.interItemSpacing = 10
+        configuration.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20)
+
+        let gridView = ItemGridCollectionView<TestGridItem>(frame: CGRect(x: 0, y: 0, width: 400, height: 480))
+        gridView.applyConfiguration(configuration)
+        gridView.layoutIfNeeded()
+
+        let metrics = gridView.layoutMetrics
+        XCTAssertEqual(metrics.columnCount, 4)
+        XCTAssertEqual(metrics.rowSpacing, configuration.interGroupSpacing)
+        XCTAssertEqual(metrics.sectionTopInset, 12)
+
+        let expectedWidth = floor(
+            (400 - 20 - 20 - (10 * 3)) / 4
+        )
+        XCTAssertEqual(metrics.rowHeight, expectedWidth)
+    }
+
+    func testCategoryCellAppliesStyle() {
+        let cell = CategoryCell(frame: CGRect(x: 0, y: 0, width: 100, height: 40))
+        var style = CategoryItemStyle.legacySelected
+        style.backgroundColor = .systemGreen
+        style.textColor = .white
+        style.cornerRadius = 20
+
+        cell.configure(title: "Nature", style: style)
+
+        XCTAssertEqual(cell.contentView.backgroundColor, .systemGreen)
+        XCTAssertEqual(cell.contentView.layer.cornerRadius, 20)
+    }
+
+    @MainActor
+    func testHeaderConfigurationUpdatesLayoutSpacing() {
+        struct TestCategory: CategoryDisplayable, Hashable {
+            let categoryID: String
+            let categoryTitle: String
+        }
+
+        let headerView = CategoryHeaderView<TestCategory>(frame: CGRect(x: 0, y: 0, width: 320, height: 52))
+        var configuration = CategoryHeaderConfiguration.default
+        configuration.itemSpacing = 16
+        configuration.sectionInsets = NSDirectionalEdgeInsets(top: 0, leading: 24, bottom: 0, trailing: 24)
+
+        headerView.applyConfiguration(configuration)
+
+        guard let collectionView = headerView.subviews.first as? UICollectionView,
+              let layout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout
+        else {
+            XCTFail("Expected flow layout collection view")
+            return
+        }
+
+        XCTAssertEqual(layout.minimumInteritemSpacing, 16)
+        XCTAssertEqual(layout.sectionInset.left, 24)
+    }
+}
+
+private struct TestGridItem: ItemDisplayable {
+    let itemID: String
+    let categoryID: String
+    let imageURL: URL
 }

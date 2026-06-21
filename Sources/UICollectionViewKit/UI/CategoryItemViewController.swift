@@ -18,9 +18,12 @@ public final class CategoryItemViewController<
 
     private let headerView = CategoryHeaderView<C>()
     private let gridView = ItemGridCollectionView<I>()
+    private var headerHeightConstraint: NSLayoutConstraint?
 
     private let itemProvider: Provider
     private let pageSize: Int
+    private var headerConfiguration: CategoryHeaderConfiguration
+    private var gridConfiguration: ItemGridConfiguration
     private var itemOverlayConfiguration: ItemOverlayConfiguration<I>?
     private var overlayStateVersion: AnyHashable = AnyHashable(0)
     private var onItemSelected: ((I) -> Void)?
@@ -35,12 +38,16 @@ public final class CategoryItemViewController<
         categories: [C],
         itemProvider: Provider,
         pageSize: Int,
+        headerConfiguration: CategoryHeaderConfiguration = .default,
+        gridConfiguration: ItemGridConfiguration = .default,
         itemOverlayConfiguration: ItemOverlayConfiguration<I>? = nil,
         onItemSelected: ((I) -> Void)? = nil
     ) {
         self.categories = categories
         self.itemProvider = itemProvider
         self.pageSize = pageSize
+        self.headerConfiguration = headerConfiguration
+        self.gridConfiguration = gridConfiguration
         self.itemOverlayConfiguration = itemOverlayConfiguration
         self.onItemSelected = onItemSelected
         self.selectedCategoryID = categories.first?.categoryID
@@ -106,6 +113,18 @@ public final class CategoryItemViewController<
         gridView.reloadVisibleItemOverlays()
     }
 
+    public func updateAppearance(
+        headerConfiguration: CategoryHeaderConfiguration,
+        gridConfiguration: ItemGridConfiguration
+    ) {
+        self.headerConfiguration = headerConfiguration
+        self.gridConfiguration = gridConfiguration
+
+        headerHeightConstraint?.constant = headerConfiguration.headerHeight
+        headerView.applyConfiguration(headerConfiguration)
+        gridView.applyConfiguration(gridConfiguration)
+    }
+
     private func setupViews() {
         headerView.translatesAutoresizingMaskIntoConstraints = false
         gridView.translatesAutoresizingMaskIntoConstraints = false
@@ -113,17 +132,25 @@ public final class CategoryItemViewController<
         view.addSubview(headerView)
         view.addSubview(gridView)
 
+        let headerHeightConstraint = headerView.heightAnchor.constraint(
+            equalToConstant: headerConfiguration.headerHeight
+        )
+        self.headerHeightConstraint = headerHeightConstraint
+
         NSLayoutConstraint.activate([
             headerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             headerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             headerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            headerView.heightAnchor.constraint(equalToConstant: 52),
+            headerHeightConstraint,
 
             gridView.topAnchor.constraint(equalTo: headerView.bottomAnchor),
             gridView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             gridView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             gridView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+
+        headerView.applyConfiguration(headerConfiguration)
+        gridView.applyConfiguration(gridConfiguration)
     }
 
     private func setupCallbacks() {

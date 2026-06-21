@@ -9,13 +9,11 @@ final class CategoryHeaderView<C: CategoryDisplayable>: UIView, UICollectionView
 
     private var categories: [C] = []
     private var selectedCategoryID: String?
+    private var configuration = CategoryHeaderConfiguration.default
 
     private lazy var collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
-        layout.minimumInteritemSpacing = 8
-        layout.minimumLineSpacing = 8
-        layout.sectionInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
         layout.estimatedItemSize = UICollectionViewFlowLayout.automaticSize
 
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
@@ -39,7 +37,8 @@ final class CategoryHeaderView<C: CategoryDisplayable>: UIView, UICollectionView
                 return UICollectionViewCell()
             }
             let isSelected = category.categoryID == self.selectedCategoryID
-            cell.configure(title: category.categoryTitle, isSelected: isSelected)
+            let style = isSelected ? self.configuration.selectedStyle : self.configuration.normalStyle
+            cell.configure(title: category.categoryTitle, style: style)
             return cell
         }
     }()
@@ -47,6 +46,7 @@ final class CategoryHeaderView<C: CategoryDisplayable>: UIView, UICollectionView
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupViews()
+        applyLayout(from: configuration)
     }
 
     @available(*, unavailable)
@@ -62,6 +62,25 @@ final class CategoryHeaderView<C: CategoryDisplayable>: UIView, UICollectionView
             collectionView.leadingAnchor.constraint(equalTo: leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: trailingAnchor),
         ])
+    }
+
+    func applyConfiguration(_ configuration: CategoryHeaderConfiguration) {
+        let layoutChanged = self.configuration.itemSpacing != configuration.itemSpacing
+            || self.configuration.lineSpacing != configuration.lineSpacing
+            || self.configuration.sectionInsets != configuration.sectionInsets
+
+        self.configuration = configuration
+        applyLayout(from: configuration)
+
+        guard !categories.isEmpty else { return }
+
+        if layoutChanged {
+            collectionView.collectionViewLayout.invalidateLayout()
+        }
+
+        var snapshot = dataSource.snapshot()
+        snapshot.reloadSections([0])
+        dataSource.apply(snapshot, animatingDifferences: false)
     }
 
     func apply(categories: [C], selectedCategoryID: String?) {
@@ -85,5 +104,17 @@ final class CategoryHeaderView<C: CategoryDisplayable>: UIView, UICollectionView
         guard indexPath.item < categories.count else { return }
         let category = categories[indexPath.item]
         onCategorySelected?(category)
+    }
+
+    private func applyLayout(from configuration: CategoryHeaderConfiguration) {
+        guard let layout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout else { return }
+        layout.minimumInteritemSpacing = configuration.itemSpacing
+        layout.minimumLineSpacing = configuration.lineSpacing
+        layout.sectionInset = UIEdgeInsets(
+            top: configuration.sectionInsets.top,
+            left: configuration.sectionInsets.leading,
+            bottom: configuration.sectionInsets.bottom,
+            right: configuration.sectionInsets.trailing
+        )
     }
 }

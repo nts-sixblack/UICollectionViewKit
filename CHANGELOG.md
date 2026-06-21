@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-06-21
+
+### Added
+
+- `CategoryItemStyle`, `CategoryHeaderConfiguration`, and `ItemGridConfiguration` for customizing category tab appearance (normal/selected styles, spacing, insets, header height) and item grid layout (column count, spacing, insets, corner radius, image background).
+- `CategoryItemViewController.updateAppearance(headerConfiguration:gridConfiguration:)` to refresh header and grid styling at runtime.
+- Optional `headerConfiguration` and `gridConfiguration` parameters on `CategoryItemCollectionView` and `CategoryItemViewController` (default `.default` preserves previous built-in styling).
+
+### Documentation
+
+- README and DocC updated with UI configuration examples.
+- Example app demonstrates custom header and grid styling.
+
+### Tests
+
+- Added coverage for default configuration values, grid layout metrics, and header layout updates.
+
 ## [1.2.0] - 2026-06-21
 
 ### Added

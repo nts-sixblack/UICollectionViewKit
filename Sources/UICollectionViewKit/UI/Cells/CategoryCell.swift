@@ -5,11 +5,15 @@ final class CategoryCell: UICollectionViewCell {
 
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 15, weight: .medium)
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
+
+    private var topConstraint: NSLayoutConstraint?
+    private var bottomConstraint: NSLayoutConstraint?
+    private var leadingConstraint: NSLayoutConstraint?
+    private var trailingConstraint: NSLayoutConstraint?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -22,28 +26,33 @@ final class CategoryCell: UICollectionViewCell {
     }
 
     private func setupViews() {
-        contentView.layer.cornerRadius = 16
-        contentView.layer.borderWidth = 1
         contentView.addSubview(titleLabel)
 
+        topConstraint = titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8)
+        bottomConstraint = titleLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8)
+        leadingConstraint = titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16)
+        trailingConstraint = titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
+
         NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
-            titleLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
-            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-        ])
+            topConstraint,
+            bottomConstraint,
+            leadingConstraint,
+            trailingConstraint,
+        ].compactMap { $0 })
     }
 
-    func configure(title: String, isSelected: Bool) {
+    func configure(title: String, style: CategoryItemStyle) {
         titleLabel.text = title
-        if isSelected {
-            contentView.backgroundColor = .systemBlue
-            contentView.layer.borderColor = UIColor.systemBlue.cgColor
-            titleLabel.textColor = .white
-        } else {
-            contentView.backgroundColor = .secondarySystemBackground
-            contentView.layer.borderColor = UIColor.separator.cgColor
-            titleLabel.textColor = .label
-        }
+        titleLabel.font = style.font
+        titleLabel.textColor = style.textColor
+        contentView.backgroundColor = style.backgroundColor
+        contentView.layer.cornerRadius = style.cornerRadius
+        contentView.layer.borderWidth = style.borderWidth
+        contentView.layer.borderColor = style.borderColor.cgColor
+
+        topConstraint?.constant = style.contentInsets.top
+        bottomConstraint?.constant = -style.contentInsets.bottom
+        leadingConstraint?.constant = style.contentInsets.leading
+        trailingConstraint?.constant = -style.contentInsets.trailing
     }
 }

@@ -8,6 +8,8 @@ public struct CategoryItemCollectionView<
     let categories: [C]
     let itemProvider: Provider
     let pageSize: Int
+    let headerConfiguration: CategoryHeaderConfiguration
+    let gridConfiguration: ItemGridConfiguration
     let itemOverlayConfiguration: ItemOverlayConfiguration<I>?
     let onItemSelected: ((I) -> Void)?
 
@@ -15,12 +17,16 @@ public struct CategoryItemCollectionView<
         categories: [C],
         itemProvider: Provider,
         pageSize: Int,
+        headerConfiguration: CategoryHeaderConfiguration = .default,
+        gridConfiguration: ItemGridConfiguration = .default,
         itemOverlayConfiguration: ItemOverlayConfiguration<I>? = nil,
         onItemSelected: ((I) -> Void)? = nil
     ) {
         self.categories = categories
         self.itemProvider = itemProvider
         self.pageSize = pageSize
+        self.headerConfiguration = headerConfiguration
+        self.gridConfiguration = gridConfiguration
         self.itemOverlayConfiguration = itemOverlayConfiguration
         self.onItemSelected = onItemSelected
     }
@@ -30,6 +36,8 @@ public struct CategoryItemCollectionView<
             categories: categories,
             itemProvider: itemProvider,
             pageSize: pageSize,
+            headerConfiguration: headerConfiguration,
+            gridConfiguration: gridConfiguration,
             itemOverlayConfiguration: itemOverlayConfiguration,
             onItemSelected: onItemSelected
         )
@@ -37,6 +45,10 @@ public struct CategoryItemCollectionView<
 
     public func updateUIViewController(_ viewController: CategoryItemViewController<C, I, Provider>, context: Context) {
         viewController.update(categories: categories)
+        viewController.updateAppearance(
+            headerConfiguration: headerConfiguration,
+            gridConfiguration: gridConfiguration
+        )
         viewController.updateItemInteraction(
             overlayConfiguration: itemOverlayConfiguration,
             onItemSelected: onItemSelected

@@ -6,12 +6,12 @@ final class ItemImageCell: UICollectionViewCell {
     private(set) var loadToken = UUID()
     private var currentURL: URL?
     private var hostedOverlayView: UIView?
+    private var appearance = ItemGridConfiguration.default
 
     private let imageView: UIImageView = {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
-        imageView.backgroundColor = .secondarySystemBackground
         imageView.translatesAutoresizingMaskIntoConstraints = false
         return imageView
     }()
@@ -34,6 +34,7 @@ final class ItemImageCell: UICollectionViewCell {
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupViews()
+        applyAppearance(from: appearance)
     }
 
     @available(*, unavailable)
@@ -42,7 +43,6 @@ final class ItemImageCell: UICollectionViewCell {
     }
 
     private func setupViews() {
-        contentView.layer.cornerRadius = 8
         contentView.clipsToBounds = true
         contentView.addSubview(imageView)
         contentView.addSubview(overlayContainer)
@@ -71,11 +71,19 @@ final class ItemImageCell: UICollectionViewCell {
         activityIndicator.stopAnimating()
     }
 
+    func applyAppearance(from configuration: ItemGridConfiguration) {
+        appearance = configuration
+        contentView.layer.cornerRadius = configuration.cornerRadius
+        imageView.backgroundColor = configuration.imageBackgroundColor
+    }
+
     func configure<I: ItemDisplayable>(
         with url: URL,
         overlayConfiguration: ItemOverlayConfiguration<I>?,
-        item: I
+        item: I,
+        appearance configuration: ItemGridConfiguration
     ) {
+        applyAppearance(from: configuration)
         configureImage(with: url)
         configureOverlay(overlayConfiguration: overlayConfiguration, item: item)
     }

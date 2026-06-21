@@ -17,6 +17,8 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
     var itemOverlayConfiguration: ItemOverlayConfiguration<I>?
     var onItemSelected: ((I) -> Void)?
 
+    private var configuration = ItemGridConfiguration.default
+
     private enum ScrollDirection {
         case up
         case down
@@ -74,7 +76,10 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
     }()
 
     private lazy var dataSource: DataSource = {
-        DataSource(collectionView: collectionView) { collectionView, indexPath, item in
+        DataSource(collectionView: collectionView) { [weak self] collectionView, indexPath, item in
+            guard let self else {
+                return UICollectionViewCell()
+            }
             guard let cell = collectionView.dequeueReusableCell(
                 withReuseIdentifier: ItemImageCell.reuseIdentifier,
                 for: indexPath
@@ -84,7 +89,8 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
             cell.configure(
                 with: item.imageURL,
                 overlayConfiguration: self.itemOverlayConfiguration,
-                item: item
+                item: item,
+                appearance: self.configuration
             )
             return cell
         }
@@ -98,6 +104,28 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    func applyConfiguration(_ configuration: ItemGridConfiguration) {
+        let layoutChanged = self.configuration.columnCountPhone != configuration.columnCountPhone
+            || self.configuration.columnCountPad != configuration.columnCountPad
+            || self.configuration.interItemSpacing != configuration.interItemSpacing
+            || self.configuration.interGroupSpacing != configuration.interGroupSpacing
+            || self.configuration.contentInsets != configuration.contentInsets
+
+        let appearanceChanged = self.configuration.cornerRadius != configuration.cornerRadius
+            || self.configuration.imageBackgroundColor != configuration.imageBackgroundColor
+
+        self.configuration = configuration
+
+        if layoutChanged {
+            collectionView.setCollectionViewLayout(makeLayout(), animated: false)
+            collectionView.layoutIfNeeded()
+        }
+
+        if appearanceChanged || layoutChanged {
+            reloadVisibleCells()
+        }
     }
 
     private func setupViews() {
@@ -183,7 +211,25 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
             cell.configure(
                 with: item.imageURL,
                 overlayConfiguration: itemOverlayConfiguration,
-                item: item
+                item: item,
+                appearance: configuration
+            )
+        }
+    }
+
+    private func reloadVisibleCells() {
+        for indexPath in collectionView.indexPathsForVisibleItems {
+            guard let item = dataSource.itemIdentifier(for: indexPath),
+                  let cell = collectionView.cellForItem(at: indexPath) as? ItemImageCell
+            else {
+                continue
+            }
+
+            cell.configure(
+                with: item.imageURL,
+                overlayConfiguration: itemOverlayConfiguration,
+                item: item,
+                appearance: configuration
             )
         }
     }
@@ -462,36 +508,49 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
         return CGFloat(rowCount) * metrics.rowHeight + CGFloat(max(0, rowCount - 1)) * metrics.rowSpacing
     }
 
-    private func currentLayoutMetrics() -> LayoutMetrics {
-        let isPad = traitCollection.userInterfaceIdiom == .pad
-        let columnCount = isPad ? 5 : 3
-        let spacing: CGFloat = 8
-        let horizontalInset: CGFloat = 16
+    private func columnCount(for idiom: UIUserInterfaceIdiom) -> Int {
+        idiom == .pad ? configuration.columnCountPad : configuration.columnCountPhone
+    }
 
-        let availableWidth = bounds.width
-            - (horizontalInset * 2)
+    private func resolvedLayoutMetrics(
+        containerWidth: CGFloat,
+        idiom: UIUserInterfaceIdiom
+    ) -> LayoutMetrics {
+        let columnCount = columnCount(for: idiom)
+        let spacing = configuration.interItemSpacing
+        let horizontalInset = configuration.contentInsets.leading + configuration.contentInsets.trailing
+
+        let availableWidth = containerWidth
+            - horizontalInset
             - (spacing * CGFloat(columnCount - 1))
         let itemWidth = floor(max(availableWidth, 0) / CGFloat(columnCount))
 
         return LayoutMetrics(
             columnCount: columnCount,
             rowHeight: itemWidth,
-            rowSpacing: spacing,
-            sectionTopInset: spacing
+            rowSpacing: configuration.interGroupSpacing,
+            sectionTopInset: configuration.contentInsets.top
+        )
+    }
+
+    private func currentLayoutMetrics() -> LayoutMetrics {
+        resolvedLayoutMetrics(
+            containerWidth: bounds.width,
+            idiom: traitCollection.userInterfaceIdiom
         )
     }
 
     private func makeLayout() -> UICollectionViewCompositionalLayout {
-        UICollectionViewCompositionalLayout { _, environment in
-            let isPad = environment.traitCollection.userInterfaceIdiom == .pad
-            let columnCount = isPad ? 5 : 3
-            let spacing: CGFloat = 8
-            let horizontalInset: CGFloat = 16
+        let configuration = configuration
+        return UICollectionViewCompositionalLayout { [weak self] _, environment in
+            guard let self else { return nil }
 
-            let availableWidth = environment.container.effectiveContentSize.width
-                - (horizontalInset * 2)
-                - (spacing * CGFloat(columnCount - 1))
-            let itemWidth = floor(availableWidth / CGFloat(columnCount))
+            let metrics = self.resolvedLayoutMetrics(
+                containerWidth: environment.container.effectiveContentSize.width,
+                idiom: environment.traitCollection.userInterfaceIdiom
+            )
+            let spacing = configuration.interItemSpacing
+            let itemWidth = metrics.rowHeight
 
             let itemSize = NSCollectionLayoutSize(
                 widthDimension: .absolute(itemWidth),
@@ -505,18 +564,13 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
             )
             let group = NSCollectionLayoutGroup.horizontal(
                 layoutSize: groupSize,
-                subitems: Array(repeating: item, count: columnCount)
+                subitems: Array(repeating: item, count: metrics.columnCount)
             )
             group.interItemSpacing = .fixed(spacing)
 
             let section = NSCollectionLayoutSection(group: group)
-            section.interGroupSpacing = spacing
-            section.contentInsets = NSDirectionalEdgeInsets(
-                top: spacing,
-                leading: horizontalInset,
-                bottom: spacing,
-                trailing: horizontalInset
-            )
+            section.interGroupSpacing = configuration.interGroupSpacing
+            section.contentInsets = configuration.contentInsets
             return section
         }
     }

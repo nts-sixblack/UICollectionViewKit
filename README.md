@@ -6,6 +6,7 @@ A Swift Package that embeds a high-performance UIKit collection view inside Swif
 
 - **SwiftUI bridge** — Drop `CategoryItemCollectionView` into any SwiftUI view hierarchy.
 - **Category tabs** — Horizontal category picker with per-category scroll position restoration.
+- **Customizable UI** — Configure category tab styles (normal/selected), spacing, and grid layout (columns, insets, corner radius).
 - **Bidirectional pagination** — Load more items when scrolling down; load previous pages when scrolling up.
 - **Image loading** — Memory + disk cache with ImageIO downsampling and concurrent download limits.
 - **Zero third-party dependencies** — UIKit, SwiftUI, ImageIO, and CryptoKit only.
@@ -29,7 +30,7 @@ Or add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.2.0"),
+    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.3.0"),
 ],
 targets: [
     .target(
@@ -150,6 +151,53 @@ struct ContentView: View {
 
 When overlay content depends on mutable external state (e.g. a favorite store), pass a snapshot of that state as `stateVersion`. The library refreshes visible overlays automatically when `stateVersion` changes. Ensure SwiftUI observes the store (e.g. `@StateObject` / `@ObservedObject` with `@Published` properties) so the view re-renders when state updates.
 
+### 5. Optional: customize category tabs and grid layout
+
+Configure selected/normal tab styles, spacing between tabs, and grid columns/insets:
+
+```swift
+CategoryItemCollectionView(
+    categories: myCategories,
+    itemProvider: MyPaginationProvider(),
+    pageSize: 50,
+    headerConfiguration: CategoryHeaderConfiguration(
+        normalStyle: CategoryItemStyle(
+            backgroundColor: .clear,
+            borderColor: .separator,
+            textColor: .label,
+            font: .systemFont(ofSize: 14, weight: .regular),
+            cornerRadius: 20,
+            borderWidth: 1,
+            contentInsets: NSDirectionalEdgeInsets(top: 6, leading: 14, bottom: 6, trailing: 14)
+        ),
+        selectedStyle: CategoryItemStyle(
+            backgroundColor: .systemIndigo,
+            borderColor: .systemIndigo,
+            textColor: .white,
+            font: .systemFont(ofSize: 14, weight: .semibold),
+            cornerRadius: 20,
+            borderWidth: 0,
+            contentInsets: NSDirectionalEdgeInsets(top: 6, leading: 14, bottom: 6, trailing: 14)
+        ),
+        itemSpacing: 12,
+        lineSpacing: 8,
+        sectionInsets: NSDirectionalEdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20),
+        headerHeight: 48
+    ),
+    gridConfiguration: ItemGridConfiguration(
+        columnCountPhone: 4,
+        columnCountPad: 5,
+        interItemSpacing: 10,
+        interGroupSpacing: 10,
+        contentInsets: NSDirectionalEdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20),
+        cornerRadius: 12,
+        imageBackgroundColor: .secondarySystemBackground
+    )
+)
+```
+
+Omit `headerConfiguration` and `gridConfiguration` to keep the built-in defaults.
+
 ## Architecture
 
 ```
@@ -182,8 +230,11 @@ When the user selects a different category, the current scroll offset is saved a
 | `ItemDisplayable` | Protocol for grid item models (`itemID`, `categoryID`, `imageURL`). |
 | `CategoryItemPaginationProviding` | Protocol for paginated data access. |
 | `ItemOverlayConfiguration` | Factory + updater for a custom UIKit overlay on each item. Pass `stateVersion` to refresh visible overlays when external overlay state changes. |
+| `CategoryItemStyle` | Appearance for one category tab state (colors, font, corner radius, content insets). |
+| `CategoryHeaderConfiguration` | Category tab bar styling: normal/selected styles, spacing, section insets, header height. |
+| `ItemGridConfiguration` | Grid layout and cell appearance: column counts, spacing, content insets, corner radius. |
 | `CategoryItemCollectionView` | SwiftUI `UIViewControllerRepresentable` entry point. |
-| `CategoryItemViewController` | UIKit host with optional `onItemSelected` and overlay support. |
+| `CategoryItemViewController` | UIKit host with optional `onItemSelected`, overlay support, and `updateAppearance`. |
 
 ## Example
 
