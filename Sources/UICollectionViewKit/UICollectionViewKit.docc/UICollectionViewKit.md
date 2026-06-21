@@ -11,9 +11,11 @@ UICollectionViewKit wraps a UIKit-based category + grid experience in a single S
 ### Essentials
 
 - ``CategoryItemCollectionView``
+- ``CategoryItemViewController``
 - ``CategoryDisplayable``
 - ``ItemDisplayable``
 - ``CategoryItemPaginationProviding``
+- ``ItemOverlayConfiguration``
 
 ### Getting Started
 
@@ -29,7 +31,9 @@ CategoryItemCollectionView(
 )
 ```
 
-Pass `overlayReloadToken` when overlay views depend on mutable external state (e.g. favorites). Increment the token whenever that state changes to refresh visible overlays without scrolling.
+Pass `stateVersion` on ``ItemOverlayConfiguration`` when overlay views depend on mutable external state (e.g. favorites). Provide a snapshot of that state (e.g. `store.favorites`) and ensure SwiftUI observes the store so the view re-renders when state updates. Visible overlays refresh automatically when `stateVersion` changes.
+
+For UIKit-only integration, call ``CategoryItemViewController/reloadVisibleItemOverlays()`` when external overlay state changes.
 
 ### Pagination
 

@@ -22,6 +22,7 @@ public final class CategoryItemViewController<
     private let itemProvider: Provider
     private let pageSize: Int
     private var itemOverlayConfiguration: ItemOverlayConfiguration<I>?
+    private var overlayStateVersion: AnyHashable = AnyHashable(0)
     private var onItemSelected: ((I) -> Void)?
     /// Max previous-page batches loaded in one top-edge settle (avoids long main-thread loops).
     private let maxPreviousLoadsPerTopSettle = 12
@@ -87,10 +88,18 @@ public final class CategoryItemViewController<
         overlayConfiguration: ItemOverlayConfiguration<I>?,
         onItemSelected: ((I) -> Void)?
     ) {
+        let newVersion = overlayConfiguration?.stateVersion ?? AnyHashable(0)
+        let shouldRefreshOverlays = newVersion != overlayStateVersion
+
         itemOverlayConfiguration = overlayConfiguration
         self.onItemSelected = onItemSelected
         gridView.itemOverlayConfiguration = overlayConfiguration
         gridView.onItemSelected = onItemSelected
+
+        if shouldRefreshOverlays {
+            overlayStateVersion = newVersion
+            gridView.reloadVisibleItemOverlays()
+        }
     }
 
     public func reloadVisibleItemOverlays() {

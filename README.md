@@ -29,7 +29,7 @@ Or add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.1.0"),
+    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.2.0"),
 ],
 targets: [
     .target(
@@ -100,9 +100,8 @@ struct ContentView: View {
 Add a UIKit overlay view on each item (e.g. a favorite button) and handle item taps:
 
 ```swift
-final class FavoriteStore {
-    var favorites: Set<String> = []
-    var onFavoritesChanged: (() -> Void)?
+final class FavoriteStore: ObservableObject {
+    @Published private(set) var favorites: Set<String> = []
 
     func toggle(_ itemID: String) {
         if favorites.contains(itemID) {
@@ -110,13 +109,11 @@ final class FavoriteStore {
         } else {
             favorites.insert(itemID)
         }
-        onFavoritesChanged?()
     }
 }
 
 struct ContentView: View {
-    private let favoriteStore = FavoriteStore()
-    @State private var overlayReloadToken = 0
+    @StateObject private var favoriteStore = FavoriteStore()
 
     var body: some View {
         CategoryItemCollectionView(
@@ -124,6 +121,7 @@ struct ContentView: View {
             itemProvider: MyPaginationProvider(),
             pageSize: 50,
             itemOverlayConfiguration: ItemOverlayConfiguration(
+                stateVersion: favoriteStore.favorites,
                 makeView: {
                     let button = UIButton(type: .system)
                     button.tintColor = .white
@@ -142,21 +140,15 @@ struct ContentView: View {
             ),
             onItemSelected: { item in
                 print("Selected:", item.itemID)
-            },
-            overlayReloadToken: overlayReloadToken
-        )
-        .onAppear {
-            favoriteStore.onFavoritesChanged = {
-                overlayReloadToken += 1
             }
-        }
+        )
     }
 }
 ```
 
 `makeView` is called once per reused cell; `update` runs whenever the cell is configured. Overlay controls receive their own touches without triggering item selection.
 
-When overlay content depends on mutable external state (e.g. a favorite store), increment `overlayReloadToken` whenever that state changes so visible overlays refresh immediately without scrolling.
+When overlay content depends on mutable external state (e.g. a favorite store), pass a snapshot of that state as `stateVersion`. The library refreshes visible overlays automatically when `stateVersion` changes. Ensure SwiftUI observes the store (e.g. `@StateObject` / `@ObservedObject` with `@Published` properties) so the view re-renders when state updates.
 
 ## Architecture
 
@@ -189,8 +181,8 @@ When the user selects a different category, the current scroll offset is saved a
 | `CategoryDisplayable` | Protocol for category tab models (`categoryID`, `categoryTitle`). |
 | `ItemDisplayable` | Protocol for grid item models (`itemID`, `categoryID`, `imageURL`). |
 | `CategoryItemPaginationProviding` | Protocol for paginated data access. |
-| `ItemOverlayConfiguration` | Factory + updater for a custom UIKit overlay on each item. |
-| `CategoryItemCollectionView` | SwiftUI `UIViewControllerRepresentable` entry point. Pass `overlayReloadToken` to refresh visible overlays when external overlay state changes. |
+| `ItemOverlayConfiguration` | Factory + updater for a custom UIKit overlay on each item. Pass `stateVersion` to refresh visible overlays when external overlay state changes. |
+| `CategoryItemCollectionView` | SwiftUI `UIViewControllerRepresentable` entry point. |
 | `CategoryItemViewController` | UIKit host with optional `onItemSelected` and overlay support. |
 
 ## Example

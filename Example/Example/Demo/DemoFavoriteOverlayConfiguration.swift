@@ -42,9 +42,11 @@ enum DemoFavoriteOverlay {
 }
 
 func makeFavoriteOverlayConfiguration(
-    favoriteStore: DemoFavoriteStore
+    favoriteStore: DemoFavoriteStore,
+    stateVersion: AnyHashable
 ) -> ItemOverlayConfiguration<DemoItem> {
     ItemOverlayConfiguration(
+        stateVersion: stateVersion,
         makeView: { DemoFavoriteOverlay.makeHeartButtonContainer() },
         update: { view, item in
             DemoFavoriteOverlay.updateHeartButton(view, for: item, favoriteStore: favoriteStore)

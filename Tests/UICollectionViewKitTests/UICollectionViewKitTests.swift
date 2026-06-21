@@ -119,4 +119,79 @@ final class UICollectionViewKitTests: XCTestCase {
         cell.configure(with: item2.imageURL, overlayConfiguration: configuration, item: item2)
         XCTAssertEqual(makeViewCallCount, 1)
     }
+
+    @MainActor
+    func testOverlayStateVersionChangeTriggersReload() {
+        struct TestItem: ItemDisplayable {
+            let itemID: String
+            let categoryID: String
+            let imageURL: URL
+        }
+
+        struct TestCategory: CategoryDisplayable {
+            let categoryID: String
+            let categoryTitle: String
+        }
+
+        struct TestProvider: CategoryItemPaginationProviding {
+            typealias I = TestItem
+
+            func totalCount(for categoryID: String) -> Int { 1 }
+
+            func items(for categoryID: String, offset: Int, limit: Int) -> [TestItem] {
+                guard offset == 0 else { return [] }
+                return [
+                    TestItem(
+                        itemID: "item-1",
+                        categoryID: categoryID,
+                        imageURL: URL(string: "https://example.com/1.jpg")!
+                    ),
+                ]
+            }
+        }
+
+        var updateCallCount = 0
+        func makeConfiguration(stateVersion: AnyHashable) -> ItemOverlayConfiguration<TestItem> {
+            ItemOverlayConfiguration(
+                stateVersion: stateVersion,
+                makeView: { UIView() },
+                update: { _, _ in updateCallCount += 1 }
+            )
+        }
+
+        let viewController = CategoryItemViewController(
+            categories: [TestCategory(categoryID: "nature", categoryTitle: "Nature")],
+            itemProvider: TestProvider(),
+            pageSize: 10,
+            itemOverlayConfiguration: makeConfiguration(stateVersion: 0)
+        )
+
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 480))
+        window.rootViewController = viewController
+        window.makeKeyAndVisible()
+        viewController.loadViewIfNeeded()
+        RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+
+        let countAfterInitialLoad = updateCallCount
+        XCTAssertGreaterThan(countAfterInitialLoad, 0)
+
+        viewController.updateItemInteraction(
+            overlayConfiguration: makeConfiguration(stateVersion: 0),
+            onItemSelected: nil
+        )
+        XCTAssertEqual(updateCallCount, countAfterInitialLoad)
+
+        viewController.updateItemInteraction(
+            overlayConfiguration: makeConfiguration(stateVersion: 1),
+            onItemSelected: nil
+        )
+        XCTAssertGreaterThan(updateCallCount, countAfterInitialLoad)
+
+        let countAfterFirstReload = updateCallCount
+        viewController.updateItemInteraction(
+            overlayConfiguration: makeConfiguration(stateVersion: 1),
+            onItemSelected: nil
+        )
+        XCTAssertEqual(updateCallCount, countAfterFirstReload)
+    }
 }

@@ -2,7 +2,7 @@ import Combine
 import Foundation
 
 final class DemoFavoriteStore: ObservableObject {
-    private(set) var favorites: Set<String> = []
+    @Published private(set) var favorites: Set<String> = []
     var onFavoritesChanged: (() -> Void)?
 
     func isFavorite(_ itemID: String) -> Bool {

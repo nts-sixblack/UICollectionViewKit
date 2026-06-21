@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-06-21
+
+### Added
+
+- `stateVersion` parameter on `ItemOverlayConfiguration` to refresh visible item overlays when external overlay state changes.
+
+### Changed
+
+- `CategoryItemViewController.updateItemInteraction(_:)` automatically reloads visible overlays when `stateVersion` changes.
+
+### Removed
+
+- **Breaking:** `overlayReloadToken` parameter on `CategoryItemCollectionView`. Use `ItemOverlayConfiguration(stateVersion:)` instead.
+
+### Migration
+
+```swift
+// Before (1.1.0)
+overlayReloadToken: token
+.onAppear { store.onChange = { token += 1 } }
+
+// After (1.2.0)
+itemOverlayConfiguration: ItemOverlayConfiguration(
+    stateVersion: store.favorites,
+    makeView: ..., update: ...
+)
+```
+
+### Documentation
+
+- README and DocC updated with `stateVersion` usage.
+
 ## [1.1.0] - 2026-06-21
 
 ### Added
