@@ -21,6 +21,8 @@ public final class CategoryItemViewController<
 
     private let itemProvider: Provider
     private let pageSize: Int
+    private var itemOverlayConfiguration: ItemOverlayConfiguration<I>?
+    private var onItemSelected: ((I) -> Void)?
     /// Max previous-page batches loaded in one top-edge settle (avoids long main-thread loops).
     private let maxPreviousLoadsPerTopSettle = 12
 
@@ -28,10 +30,18 @@ public final class CategoryItemViewController<
     private var selectedCategoryID: String?
     private var categoryStates: [String: CategoryState] = [:]
 
-    public init(categories: [C], itemProvider: Provider, pageSize: Int) {
+    public init(
+        categories: [C],
+        itemProvider: Provider,
+        pageSize: Int,
+        itemOverlayConfiguration: ItemOverlayConfiguration<I>? = nil,
+        onItemSelected: ((I) -> Void)? = nil
+    ) {
         self.categories = categories
         self.itemProvider = itemProvider
         self.pageSize = pageSize
+        self.itemOverlayConfiguration = itemOverlayConfiguration
+        self.onItemSelected = onItemSelected
         self.selectedCategoryID = categories.first?.categoryID
         super.init(nibName: nil, bundle: nil)
     }
@@ -61,6 +71,20 @@ public final class CategoryItemViewController<
         }
 
         reloadContent()
+    }
+
+    public func updateItemInteraction(
+        overlayConfiguration: ItemOverlayConfiguration<I>?,
+        onItemSelected: ((I) -> Void)?
+    ) {
+        itemOverlayConfiguration = overlayConfiguration
+        self.onItemSelected = onItemSelected
+        gridView.itemOverlayConfiguration = overlayConfiguration
+        gridView.onItemSelected = onItemSelected
+    }
+
+    public func reloadVisibleItemOverlays() {
+        gridView.reloadVisibleItemOverlays()
     }
 
     private func setupViews() {
@@ -96,6 +120,9 @@ public final class CategoryItemViewController<
         gridView.onNearTop = { [weak self] in
             self?.loadPreviousIfNeeded()
         }
+
+        gridView.itemOverlayConfiguration = itemOverlayConfiguration
+        gridView.onItemSelected = onItemSelected
     }
 
     private func switchCategory(to categoryID: String) {

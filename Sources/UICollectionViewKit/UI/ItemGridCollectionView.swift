@@ -14,6 +14,8 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
 
     var onNearBottom: (() -> Void)?
     var onNearTop: (() -> Void)?
+    var itemOverlayConfiguration: ItemOverlayConfiguration<I>?
+    var onItemSelected: ((I) -> Void)?
 
     private enum ScrollDirection {
         case up
@@ -79,7 +81,11 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
             ) as? ItemImageCell else {
                 return UICollectionViewCell()
             }
-            cell.configure(with: item.imageURL)
+            cell.configure(
+                with: item.imageURL,
+                overlayConfiguration: self.itemOverlayConfiguration,
+                item: item
+            )
             return cell
         }
     }()
@@ -159,6 +165,33 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
         }
 
         performPrepend(items: items, completion: completion)
+    }
+
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        guard let item = dataSource.itemIdentifier(for: indexPath) else { return }
+        onItemSelected?(item)
+    }
+
+    func reloadVisibleItemOverlays() {
+        for indexPath in collectionView.indexPathsForVisibleItems {
+            guard let item = dataSource.itemIdentifier(for: indexPath),
+                  let cell = collectionView.cellForItem(at: indexPath) as? ItemImageCell
+            else {
+                continue
+            }
+
+            cell.configure(
+                with: item.imageURL,
+                overlayConfiguration: itemOverlayConfiguration,
+                item: item
+            )
+        }
+    }
+
+    func selectItem(at index: Int) {
+        let items = dataSource.snapshot().itemIdentifiers
+        guard items.indices.contains(index) else { return }
+        onItemSelected?(items[index])
     }
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {

@@ -95,6 +95,60 @@ struct ContentView: View {
 }
 ```
 
+### 4. Optional: custom overlay views and item selection
+
+Add a UIKit overlay view on each item (e.g. a favorite button) and handle item taps:
+
+```swift
+final class FavoriteStore {
+    var favorites: Set<String> = []
+    var onFavoritesChanged: (() -> Void)?
+
+    func toggle(_ itemID: String) {
+        if favorites.contains(itemID) {
+            favorites.remove(itemID)
+        } else {
+            favorites.insert(itemID)
+        }
+        onFavoritesChanged?()
+    }
+}
+
+struct ContentView: View {
+    private let favoriteStore = FavoriteStore()
+
+    var body: some View {
+        CategoryItemCollectionView(
+            categories: myCategories,
+            itemProvider: MyPaginationProvider(),
+            pageSize: 50,
+            itemOverlayConfiguration: ItemOverlayConfiguration(
+                makeView: {
+                    let button = UIButton(type: .system)
+                    button.tintColor = .white
+                    button.translatesAutoresizingMaskIntoConstraints = false
+                    return button
+                },
+                update: { view, item in
+                    guard let button = view as? UIButton else { return }
+                    let name = favoriteStore.favorites.contains(item.itemID) ? "heart.fill" : "heart"
+                    button.setImage(UIImage(systemName: name), for: .normal)
+                    button.removeTarget(nil, action: nil, for: .touchUpInside)
+                    button.addAction(UIAction { _ in
+                        favoriteStore.toggle(item.itemID)
+                    }, for: .touchUpInside)
+                }
+            ),
+            onItemSelected: { item in
+                print("Selected:", item.itemID)
+            }
+        )
+    }
+}
+```
+
+`makeView` is called once per reused cell; `update` runs whenever the cell is configured. Overlay controls receive their own touches without triggering item selection.
+
 ## Architecture
 
 ```
@@ -126,7 +180,9 @@ When the user selects a different category, the current scroll offset is saved a
 | `CategoryDisplayable` | Protocol for category tab models (`categoryID`, `categoryTitle`). |
 | `ItemDisplayable` | Protocol for grid item models (`itemID`, `categoryID`, `imageURL`). |
 | `CategoryItemPaginationProviding` | Protocol for paginated data access. |
+| `ItemOverlayConfiguration` | Factory + updater for a custom UIKit overlay on each item. |
 | `CategoryItemCollectionView` | SwiftUI `UIViewControllerRepresentable` entry point. |
+| `CategoryItemViewController` | UIKit host with optional `onItemSelected` and overlay support. |
 
 ## Example
 

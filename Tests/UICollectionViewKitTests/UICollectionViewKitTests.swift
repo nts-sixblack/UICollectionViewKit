@@ -59,4 +59,64 @@ final class UICollectionViewKitTests: XCTestCase {
         XCTAssertEqual(page.count, 10)
         XCTAssertEqual(page.first?.itemID, "nature-0")
     }
+
+    @MainActor
+    func testItemSelectionCallback() {
+        struct TestItem: ItemDisplayable {
+            let itemID: String
+            let categoryID: String
+            let imageURL: URL
+        }
+
+        let item = TestItem(
+            itemID: "item-1",
+            categoryID: "nature",
+            imageURL: URL(string: "https://example.com/1.jpg")!
+        )
+
+        let gridView = ItemGridCollectionView<TestItem>(frame: CGRect(x: 0, y: 0, width: 320, height: 480))
+        gridView.apply(items: [item])
+
+        var selectedItem: TestItem?
+        gridView.onItemSelected = { selectedItem = $0 }
+        gridView.selectItem(at: 0)
+
+        XCTAssertEqual(selectedItem?.itemID, "item-1")
+    }
+
+    @MainActor
+    func testOverlayMakeViewCalledOncePerCell() {
+        struct TestItem: ItemDisplayable {
+            let itemID: String
+            let categoryID: String
+            let imageURL: URL
+        }
+
+        var makeViewCallCount = 0
+        let configuration = ItemOverlayConfiguration<TestItem>(
+            makeView: {
+                makeViewCallCount += 1
+                return UIView()
+            },
+            update: { (_: UIView, _: TestItem) in }
+        )
+
+        let cell = ItemImageCell(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        let item1 = TestItem(
+            itemID: "1",
+            categoryID: "nature",
+            imageURL: URL(string: "https://example.com/1.jpg")!
+        )
+        let item2 = TestItem(
+            itemID: "2",
+            categoryID: "nature",
+            imageURL: URL(string: "https://example.com/2.jpg")!
+        )
+
+        cell.configure(with: item1.imageURL, overlayConfiguration: configuration, item: item1)
+        XCTAssertEqual(makeViewCallCount, 1)
+
+        cell.configure(with: item2.imageURL, overlayConfiguration: configuration, item: item2)
+        XCTAssertEqual(makeViewCallCount, 1)
+    }
 }
