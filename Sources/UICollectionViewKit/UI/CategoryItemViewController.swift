@@ -60,15 +60,25 @@ public final class CategoryItemViewController<
     }
 
     public func update(categories: [C]) {
+        let previousCategoryIDs = self.categories.map(\.categoryID)
+        let newCategoryIDs = categories.map(\.categoryID)
+        let categoriesChanged = previousCategoryIDs != newCategoryIDs
+
         self.categories = categories
+
+        var needsReload = categoriesChanged
 
         if let selectedCategoryID,
            !categories.contains(where: { $0.categoryID == selectedCategoryID }) {
             self.selectedCategoryID = categories.first?.categoryID
             categoryStates.removeAll()
+            needsReload = true
         } else if selectedCategoryID == nil {
             self.selectedCategoryID = categories.first?.categoryID
+            needsReload = true
         }
+
+        guard needsReload else { return }
 
         reloadContent()
     }
@@ -133,6 +143,7 @@ public final class CategoryItemViewController<
     }
 
     private func reloadContent() {
+        saveScrollOffsetForCurrentCategory()
         headerView.apply(categories: categories, selectedCategoryID: selectedCategoryID)
 
         guard let selectedCategoryID else {

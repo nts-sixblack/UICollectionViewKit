@@ -29,6 +29,8 @@ CategoryItemCollectionView(
 )
 ```
 
+Pass `overlayReloadToken` when overlay views depend on mutable external state (e.g. favorites). Increment the token whenever that state changes to refresh visible overlays without scrolling.
+
 ### Pagination
 
 The provider receives `offset` and `limit` parameters for each page request:

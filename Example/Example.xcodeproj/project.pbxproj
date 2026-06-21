@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		AF29A4922FE69B39007D1E13 /* UICollectionViewKit in Frameworks */ = {isa = PBXBuildFile; productRef = AF29A4912FE69B39007D1E13 /* UICollectionViewKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		AF29A47E2FE69B37007D1E13 /* Example.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Example.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -17,10 +21,6 @@
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
-
-/* Begin PBXBuildFile section */
-		AF29A4922FE69B39007D1E13 /* UICollectionViewKit in Frameworks */ = {isa = PBXBuildFile; productRef = AF29A4912FE69B39007D1E13 /* UICollectionViewKit */; };
-/* End PBXBuildFile section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		AF29A47B2FE69B37007D1E13 /* Frameworks */ = {
@@ -100,10 +100,10 @@
 			);
 			mainGroup = AF29A4752FE69B37007D1E13;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			packageReferences = (
 				AF29A4902FE69B39007D1E13 /* XCLocalSwiftPackageReference ".." */,
 			);
+			preferredProjectObjectVersion = 77;
 			productRefGroup = AF29A47F2FE69B37007D1E13 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";

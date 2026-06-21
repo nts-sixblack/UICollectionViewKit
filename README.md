@@ -29,7 +29,7 @@ Or add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.0.0"),
+    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.1.0"),
 ],
 targets: [
     .target(
@@ -116,6 +116,7 @@ final class FavoriteStore {
 
 struct ContentView: View {
     private let favoriteStore = FavoriteStore()
+    @State private var overlayReloadToken = 0
 
     var body: some View {
         CategoryItemCollectionView(
@@ -141,13 +142,21 @@ struct ContentView: View {
             ),
             onItemSelected: { item in
                 print("Selected:", item.itemID)
-            }
+            },
+            overlayReloadToken: overlayReloadToken
         )
+        .onAppear {
+            favoriteStore.onFavoritesChanged = {
+                overlayReloadToken += 1
+            }
+        }
     }
 }
 ```
 
 `makeView` is called once per reused cell; `update` runs whenever the cell is configured. Overlay controls receive their own touches without triggering item selection.
+
+When overlay content depends on mutable external state (e.g. a favorite store), increment `overlayReloadToken` whenever that state changes so visible overlays refresh immediately without scrolling.
 
 ## Architecture
 
@@ -181,7 +190,7 @@ When the user selects a different category, the current scroll offset is saved a
 | `ItemDisplayable` | Protocol for grid item models (`itemID`, `categoryID`, `imageURL`). |
 | `CategoryItemPaginationProviding` | Protocol for paginated data access. |
 | `ItemOverlayConfiguration` | Factory + updater for a custom UIKit overlay on each item. |
-| `CategoryItemCollectionView` | SwiftUI `UIViewControllerRepresentable` entry point. |
+| `CategoryItemCollectionView` | SwiftUI `UIViewControllerRepresentable` entry point. Pass `overlayReloadToken` to refresh visible overlays when external overlay state changes. |
 | `CategoryItemViewController` | UIKit host with optional `onItemSelected` and overlay support. |
 
 ## Example
