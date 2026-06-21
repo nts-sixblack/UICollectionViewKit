@@ -5,9 +5,16 @@ import UIKit
 struct DemoCollectionView: UIViewControllerRepresentable {
     @ObservedObject var favoriteStore: DemoFavoriteStore
     @Binding var selectedItemID: String?
+    var aspectRatio: ItemAspectRatio
+    var backgroundConfiguration: CategoryItemBackgroundConfiguration
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(favoriteStore: favoriteStore, selectedItemID: $selectedItemID)
+        Coordinator(
+            favoriteStore: favoriteStore,
+            selectedItemID: $selectedItemID,
+            aspectRatio: aspectRatio,
+            backgroundConfiguration: backgroundConfiguration
+        )
     }
 
     func makeUIViewController(context: Context) -> CategoryItemViewController<DemoCategory, DemoItem, DemoItemPaginationProvider> {
@@ -19,10 +26,15 @@ struct DemoCollectionView: UIViewControllerRepresentable {
             }
         )
 
+        var gridConfiguration = ItemGridConfiguration.default
+        gridConfiguration.applyAspectRatio(aspectRatio)
+
         let viewController = CategoryItemViewController(
             categories: DemoDataSource.categories,
             itemProvider: DemoItemPaginationProvider(),
             pageSize: DemoDataSource.pageSize,
+            gridConfiguration: gridConfiguration,
+            backgroundConfiguration: backgroundConfiguration,
             itemOverlayConfiguration: overlayConfiguration,
             onItemSelected: { item in
                 coordinator.selectedItemID.wrappedValue = item.itemID
@@ -42,19 +54,40 @@ struct DemoCollectionView: UIViewControllerRepresentable {
         context: Context
     ) {
         context.coordinator.viewController = viewController
+        context.coordinator.aspectRatio = aspectRatio
+        context.coordinator.backgroundConfiguration = backgroundConfiguration
+
         favoriteStore.onFavoritesChanged = { [weak viewController] in
             viewController?.reloadVisibleItemOverlays()
         }
+
+        var gridConfiguration = ItemGridConfiguration.default
+        gridConfiguration.applyAspectRatio(aspectRatio)
+
+        viewController.updateAppearance(
+            headerConfiguration: .default,
+            gridConfiguration: gridConfiguration,
+            backgroundConfiguration: backgroundConfiguration
+        )
     }
 
     final class Coordinator {
         let favoriteStore: DemoFavoriteStore
         var selectedItemID: Binding<String?>
+        var aspectRatio: ItemAspectRatio
+        var backgroundConfiguration: CategoryItemBackgroundConfiguration
         weak var viewController: CategoryItemViewController<DemoCategory, DemoItem, DemoItemPaginationProvider>?
 
-        init(favoriteStore: DemoFavoriteStore, selectedItemID: Binding<String?>) {
+        init(
+            favoriteStore: DemoFavoriteStore,
+            selectedItemID: Binding<String?>,
+            aspectRatio: ItemAspectRatio,
+            backgroundConfiguration: CategoryItemBackgroundConfiguration
+        ) {
             self.favoriteStore = favoriteStore
             self.selectedItemID = selectedItemID
+            self.aspectRatio = aspectRatio
+            self.backgroundConfiguration = backgroundConfiguration
         }
 
         func updateHeartButton(_ view: UIView, for item: DemoItem) {

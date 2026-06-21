@@ -6,7 +6,7 @@ A Swift Package that embeds a high-performance UIKit collection view inside Swif
 
 - **SwiftUI bridge** — Drop `CategoryItemCollectionView` into any SwiftUI view hierarchy.
 - **Category tabs** — Horizontal category picker with per-category scroll position restoration.
-- **Customizable UI** — Configure category tab styles (normal/selected), spacing, and grid layout (columns, insets, corner radius).
+- **Customizable UI** — Configure category tab styles (normal/selected), spacing, grid layout (columns, insets, corner radius, aspect ratio), and container background colors.
 - **Bidirectional pagination** — Load more items when scrolling down; load previous pages when scrolling up.
 - **Image loading** — Memory + disk cache with ImageIO downsampling and concurrent download limits.
 - **Zero third-party dependencies** — UIKit, SwiftUI, ImageIO, and CryptoKit only.
@@ -30,7 +30,7 @@ Or add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.3.0"),
+    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.5.0"),
 ],
 targets: [
     .target(
@@ -191,12 +191,41 @@ CategoryItemCollectionView(
         interGroupSpacing: 10,
         contentInsets: NSDirectionalEdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20),
         cornerRadius: 12,
-        imageBackgroundColor: .secondarySystemBackground
+        imageBackgroundColor: .secondarySystemBackground,
+        itemHeightMultiplier: ItemAspectRatio.landscape16x9.heightMultiplier
+    ),
+    backgroundConfiguration: CategoryItemBackgroundConfiguration(
+        viewBackgroundColor: .systemBackground,
+        headerBackgroundColor: .systemBackground,
+        gridBackgroundColor: .secondarySystemBackground
     )
 )
 ```
 
-Omit `headerConfiguration` and `gridConfiguration` to keep the built-in defaults.
+Or use aspect ratio presets:
+
+```swift
+var gridConfiguration = ItemGridConfiguration.default
+gridConfiguration.applyAspectRatio(.portrait4x3)
+```
+
+Omit `headerConfiguration`, `gridConfiguration`, and `backgroundConfiguration` to keep the built-in defaults.
+
+### 6. Optional: leading category with custom content
+
+Add a leading category tab that shows custom SwiftUI or UIKit content instead of the paginated grid:
+
+```swift
+CategoryItemCollectionView(
+    categories: myCategories,
+    itemProvider: MyPaginationProvider(),
+    pageSize: 50,
+    leadingCategory: MyCategory(categoryID: "favorites", categoryTitle: "Favorites"),
+    leadingCategoryContent: {
+        FavoritesView()
+    }
+)
+```
 
 ## Architecture
 
@@ -232,7 +261,10 @@ When the user selects a different category, the current scroll offset is saved a
 | `ItemOverlayConfiguration` | Factory + updater for a custom UIKit overlay on each item. Pass `stateVersion` to refresh visible overlays when external overlay state changes. |
 | `CategoryItemStyle` | Appearance for one category tab state (colors, font, corner radius, content insets). |
 | `CategoryHeaderConfiguration` | Category tab bar styling: normal/selected styles, spacing, section insets, header height. |
-| `ItemGridConfiguration` | Grid layout and cell appearance: column counts, spacing, content insets, corner radius. |
+| `ItemGridConfiguration` | Grid layout and cell appearance: column counts, spacing, content insets, corner radius, item aspect ratio. |
+| `ItemAspectRatio` | Presets for global item height relative to width (`square`, `portrait4x3`, `landscape16x9`, `custom`). |
+| `CategoryItemBackgroundConfiguration` | Container background colors for the view controller, header bar, and grid canvas. |
+| `CategoryLeadingSlot` | UIKit hook for a leading category tab with custom content instead of the grid. |
 | `CategoryItemCollectionView` | SwiftUI `UIViewControllerRepresentable` entry point. |
 | `CategoryItemViewController` | UIKit host with optional `onItemSelected`, overlay support, and `updateAppearance`. |
 

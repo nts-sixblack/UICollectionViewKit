@@ -6,7 +6,7 @@ A UIKit collection view kit for SwiftUI with category tabs, bidirectional pagina
 
 UICollectionViewKit wraps a UIKit-based category + grid experience in a single SwiftUI view. You provide your own models and pagination logic through three protocols, and the library handles scroll state, diffable data sources, and image loading.
 
-Customize category tab appearance with ``CategoryHeaderConfiguration`` (normal vs selected pill styles, spacing, insets, header height) and the item grid with ``ItemGridConfiguration`` (column counts, spacing, content insets, corner radius). Omit both to keep the built-in defaults.
+Customize category tab appearance with ``CategoryHeaderConfiguration`` (normal vs selected pill styles, spacing, insets, header height) and the item grid with ``ItemGridConfiguration`` (column counts, spacing, content insets, corner radius, item aspect ratio). Use ``CategoryItemBackgroundConfiguration`` for container background colors. Omit all to keep the built-in defaults.
 
 ## Topics
 
@@ -21,6 +21,9 @@ Customize category tab appearance with ``CategoryHeaderConfiguration`` (normal v
 - ``CategoryItemStyle``
 - ``CategoryHeaderConfiguration``
 - ``ItemGridConfiguration``
+- ``ItemAspectRatio``
+- ``CategoryItemBackgroundConfiguration``
+- ``CategoryLeadingSlot``
 
 ### Getting Started
 
@@ -42,9 +45,20 @@ For UIKit-only integration, call ``CategoryItemViewController/reloadVisibleItemO
 
 ### UI Configuration
 
-Use ``CategoryHeaderConfiguration`` to customize category tab appearance (normal vs selected styles, spacing, insets, header height) and ``ItemGridConfiguration`` for grid columns, spacing, insets, and cell corner radius. Both default to the built-in styling when omitted.
+Use ``CategoryHeaderConfiguration`` to customize category tab appearance (normal vs selected styles, spacing, insets, header height), ``ItemGridConfiguration`` for grid columns, spacing, insets, cell corner radius, and item aspect ratio, and ``CategoryItemBackgroundConfiguration`` for container background colors. All default to the built-in styling when omitted.
 
 ```swift
+var gridConfiguration = ItemGridConfiguration(
+    columnCountPhone: 4,
+    columnCountPad: 5,
+    interItemSpacing: 10,
+    interGroupSpacing: 10,
+    contentInsets: NSDirectionalEdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20),
+    cornerRadius: 12,
+    imageBackgroundColor: .secondarySystemBackground
+)
+gridConfiguration.applyAspectRatio(.landscape16x9)
+
 CategoryItemCollectionView(
     categories: categories,
     itemProvider: provider,
@@ -65,21 +79,30 @@ CategoryItemCollectionView(
         sectionInsets: NSDirectionalEdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20),
         headerHeight: 48
     ),
-    gridConfiguration: ItemGridConfiguration(
-        columnCountPhone: 4,
-        columnCountPad: 5,
-        interItemSpacing: 10,
-        interGroupSpacing: 10,
-        contentInsets: NSDirectionalEdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20),
-        cornerRadius: 12,
-        imageBackgroundColor: .secondarySystemBackground
-    )
+    gridConfiguration: gridConfiguration,
+    backgroundConfiguration: .default
 )
 ```
 
 ``CategoryItemStyle/legacyNormal`` and ``CategoryItemStyle/legacySelected`` match the original built-in pill styling if you want to override only one state.
 
-Call ``CategoryItemViewController/updateAppearance(headerConfiguration:gridConfiguration:)`` to apply styling changes at runtime.
+Call ``CategoryItemViewController/updateAppearance(headerConfiguration:gridConfiguration:backgroundConfiguration:)`` to apply styling changes at runtime.
+
+### Leading Category
+
+Use ``CategoryLeadingSlot`` (UIKit) or the `leadingCategory` / `leadingCategoryContent` parameters on ``CategoryItemCollectionView`` (SwiftUI) to add a leading tab that shows custom content instead of the paginated grid.
+
+```swift
+CategoryItemCollectionView(
+    categories: categories,
+    itemProvider: provider,
+    pageSize: 50,
+    leadingCategory: favoritesCategory,
+    leadingCategoryContent: {
+        FavoritesView()
+    }
+)
+```
 
 ### Pagination
 

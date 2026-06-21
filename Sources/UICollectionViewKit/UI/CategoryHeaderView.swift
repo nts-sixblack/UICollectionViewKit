@@ -101,9 +101,18 @@ final class CategoryHeaderView<C: CategoryDisplayable>: UIView, UICollectionView
     }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        guard indexPath.item < categories.count else { return }
-        let category = categories[indexPath.item]
+        selectCategory(at: indexPath.item)
+    }
+
+    func selectCategory(at index: Int) {
+        guard index < categories.count else { return }
+        let category = categories[index]
         onCategorySelected?(category)
+    }
+
+    func applyBackgroundColor(_ color: UIColor) {
+        backgroundColor = color
+        collectionView.backgroundColor = color
     }
 
     private func applyLayout(from configuration: CategoryHeaderConfiguration) {

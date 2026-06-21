@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-06-21
+
+### Added
+
+- `CategoryItemBackgroundConfiguration` to customize view controller, header bar, and grid canvas background colors.
+- `ItemAspectRatio` presets (`square`, `portrait4x3`, `landscape16x9`, `custom`) and `ItemGridConfiguration.applyAspectRatio(_:)` for convenient global item aspect ratio control.
+- `itemHeightMultiplier` on `ItemGridConfiguration` to control cell height relative to width (default `1.0` for square cells).
+- `CategoryLeadingSlot` and optional `leadingCategory` / `leadingCategoryContent` on `CategoryItemCollectionView` to show custom content for a leading category tab instead of the grid.
+- Optional `backgroundConfiguration` parameter on `CategoryItemCollectionView` and `CategoryItemViewController`.
+- `CategoryItemViewController.updateAppearance(headerConfiguration:gridConfiguration:backgroundConfiguration:)` extended to apply container backgrounds at runtime.
+
+### Documentation
+
+- README, DocC, and Example app updated with background, aspect ratio, and leading category examples.
+
+### Tests
+
+- Added coverage for `ItemAspectRatio`, background application, `applyAspectRatio`, and non-square grid layout metrics.
+
 ## [1.3.0] - 2026-06-21
 
 ### Added

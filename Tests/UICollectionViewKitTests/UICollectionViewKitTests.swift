@@ -235,7 +235,24 @@ final class UICollectionViewKitTests: XCTestCase {
         let expectedWidth = floor(
             (400 - 20 - 20 - (10 * 3)) / 4
         )
+        XCTAssertEqual(metrics.itemWidth, expectedWidth)
         XCTAssertEqual(metrics.rowHeight, expectedWidth)
+    }
+
+    @MainActor
+    func testGridLayoutMetricsApplyItemHeightMultiplier() {
+        var configuration = ItemGridConfiguration.default
+        configuration.columnCountPhone = 2
+        configuration.itemHeightMultiplier = 16.0 / 9.0
+
+        let gridView = ItemGridCollectionView<TestGridItem>(frame: CGRect(x: 0, y: 0, width: 390, height: 480))
+        gridView.applyConfiguration(configuration)
+        gridView.layoutIfNeeded()
+
+        let metrics = gridView.layoutMetrics
+        let expectedWidth = floor((390 - 16 - 16 - 8) / 2)
+        XCTAssertEqual(metrics.itemWidth, expectedWidth)
+        XCTAssertEqual(metrics.rowHeight, expectedWidth * (16.0 / 9.0), accuracy: 0.01)
     }
 
     func testCategoryCellAppliesStyle() {
@@ -274,6 +291,94 @@ final class UICollectionViewKitTests: XCTestCase {
 
         XCTAssertEqual(layout.minimumInteritemSpacing, 16)
         XCTAssertEqual(layout.sectionInset.left, 24)
+    }
+
+    func testItemAspectRatioHeightMultipliers() {
+        XCTAssertEqual(ItemAspectRatio.square.heightMultiplier, 1.0, accuracy: 0.001)
+        XCTAssertEqual(ItemAspectRatio.portrait4x3.heightMultiplier, 4.0 / 3.0, accuracy: 0.001)
+        XCTAssertEqual(ItemAspectRatio.landscape16x9.heightMultiplier, 16.0 / 9.0, accuracy: 0.001)
+        XCTAssertEqual(ItemAspectRatio.custom(2.5).heightMultiplier, 2.5, accuracy: 0.001)
+    }
+
+    func testApplyAspectRatioUpdatesItemHeightMultiplier() {
+        var configuration = ItemGridConfiguration.default
+        configuration.applyAspectRatio(.landscape16x9)
+        XCTAssertEqual(configuration.itemHeightMultiplier, 16.0 / 9.0, accuracy: 0.001)
+
+        configuration.applyAspectRatio(.square)
+        XCTAssertEqual(configuration.itemHeightMultiplier, 1.0, accuracy: 0.001)
+    }
+
+    @MainActor
+    func testHeaderViewAppliesBackgroundColor() {
+        struct TestCategory: CategoryDisplayable, Hashable {
+            let categoryID: String
+            let categoryTitle: String
+        }
+
+        let headerView = CategoryHeaderView<TestCategory>(frame: CGRect(x: 0, y: 0, width: 320, height: 52))
+        headerView.applyBackgroundColor(.systemGreen)
+
+        XCTAssertEqual(headerView.backgroundColor, .systemGreen)
+        guard let collectionView = headerView.subviews.first as? UICollectionView else {
+            XCTFail("Expected collection view")
+            return
+        }
+        XCTAssertEqual(collectionView.backgroundColor, .systemGreen)
+    }
+
+    @MainActor
+    func testGridViewAppliesBackgroundColor() {
+        let gridView = ItemGridCollectionView<TestGridItem>(frame: CGRect(x: 0, y: 0, width: 320, height: 480))
+        gridView.applyBackgroundColor(.systemGreen)
+
+        guard let collectionView = gridView.subviews.first as? UICollectionView else {
+            XCTFail("Expected collection view")
+            return
+        }
+        XCTAssertEqual(collectionView.backgroundColor, .systemGreen)
+    }
+
+    @MainActor
+    func testViewControllerUpdateAppearanceAppliesBackgroundConfiguration() {
+        struct TestCategory: CategoryDisplayable, Hashable {
+            let categoryID: String
+            let categoryTitle: String
+        }
+
+        struct TestProvider: CategoryItemPaginationProviding {
+            typealias I = TestGridItem
+
+            func totalCount(for categoryID: String) -> Int { 0 }
+            func items(for categoryID: String, offset: Int, limit: Int) -> [TestGridItem] { [] }
+        }
+
+        let viewController = CategoryItemViewController<TestCategory, TestGridItem, TestProvider>(
+            categories: [TestCategory(categoryID: "nature", categoryTitle: "Nature")],
+            itemProvider: TestProvider(),
+            pageSize: 10
+        )
+        viewController.loadViewIfNeeded()
+
+        let backgroundConfiguration = CategoryItemBackgroundConfiguration(
+            viewBackgroundColor: .systemRed,
+            headerBackgroundColor: .systemGreen,
+            gridBackgroundColor: .systemBlue
+        )
+
+        viewController.updateAppearance(
+            headerConfiguration: .default,
+            gridConfiguration: .default,
+            backgroundConfiguration: backgroundConfiguration
+        )
+
+        XCTAssertEqual(viewController.view.backgroundColor, .systemRed)
+        XCTAssertEqual(viewController.test_headerView.backgroundColor, .systemGreen)
+        guard let gridCollectionView = viewController.test_gridView.subviews.first as? UICollectionView else {
+            XCTFail("Expected grid collection view")
+            return
+        }
+        XCTAssertEqual(gridCollectionView.backgroundColor, .systemBlue)
     }
 }
 

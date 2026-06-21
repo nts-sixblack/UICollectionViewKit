@@ -1,5 +1,25 @@
 import UIKit
 
+public enum ItemAspectRatio: Sendable {
+    case square
+    case portrait4x3
+    case landscape16x9
+    case custom(CGFloat)
+
+    public var heightMultiplier: CGFloat {
+        switch self {
+        case .square:
+            return 1.0
+        case .portrait4x3:
+            return 4.0 / 3.0
+        case .landscape16x9:
+            return 16.0 / 9.0
+        case .custom(let multiplier):
+            return multiplier
+        }
+    }
+}
+
 public struct ItemGridConfiguration: Sendable {
     public var columnCountPhone: Int
     public var columnCountPad: Int
@@ -8,6 +28,8 @@ public struct ItemGridConfiguration: Sendable {
     public var contentInsets: NSDirectionalEdgeInsets
     public var cornerRadius: CGFloat
     public var imageBackgroundColor: UIColor
+    /// Cell height as a multiple of cell width. Default `1.0` produces square cells.
+    public var itemHeightMultiplier: CGFloat
 
     public init(
         columnCountPhone: Int,
@@ -16,7 +38,8 @@ public struct ItemGridConfiguration: Sendable {
         interGroupSpacing: CGFloat,
         contentInsets: NSDirectionalEdgeInsets,
         cornerRadius: CGFloat,
-        imageBackgroundColor: UIColor
+        imageBackgroundColor: UIColor,
+        itemHeightMultiplier: CGFloat = 1.0
     ) {
         self.columnCountPhone = columnCountPhone
         self.columnCountPad = columnCountPad
@@ -25,6 +48,7 @@ public struct ItemGridConfiguration: Sendable {
         self.contentInsets = contentInsets
         self.cornerRadius = cornerRadius
         self.imageBackgroundColor = imageBackgroundColor
+        self.itemHeightMultiplier = itemHeightMultiplier
     }
 }
 
@@ -38,4 +62,8 @@ extension ItemGridConfiguration {
         cornerRadius: 8,
         imageBackgroundColor: .secondarySystemBackground
     )
+
+    public mutating func applyAspectRatio(_ ratio: ItemAspectRatio) {
+        itemHeightMultiplier = ratio.heightMultiplier
+    }
 }

@@ -7,6 +7,7 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
 
     struct LayoutMetrics {
         let columnCount: Int
+        let itemWidth: CGFloat
         let rowHeight: CGFloat
         let rowSpacing: CGFloat
         let sectionTopInset: CGFloat
@@ -112,6 +113,7 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
             || self.configuration.interItemSpacing != configuration.interItemSpacing
             || self.configuration.interGroupSpacing != configuration.interGroupSpacing
             || self.configuration.contentInsets != configuration.contentInsets
+            || self.configuration.itemHeightMultiplier != configuration.itemHeightMultiplier
 
         let appearanceChanged = self.configuration.cornerRadius != configuration.cornerRadius
             || self.configuration.imageBackgroundColor != configuration.imageBackgroundColor
@@ -126,6 +128,10 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
         if appearanceChanged || layoutChanged {
             reloadVisibleCells()
         }
+    }
+
+    func applyBackgroundColor(_ color: UIColor) {
+        collectionView.backgroundColor = color
     }
 
     private func setupViews() {
@@ -524,10 +530,12 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
             - horizontalInset
             - (spacing * CGFloat(columnCount - 1))
         let itemWidth = floor(max(availableWidth, 0) / CGFloat(columnCount))
+        let rowHeight = itemWidth * configuration.itemHeightMultiplier
 
         return LayoutMetrics(
             columnCount: columnCount,
-            rowHeight: itemWidth,
+            itemWidth: itemWidth,
+            rowHeight: rowHeight,
             rowSpacing: configuration.interGroupSpacing,
             sectionTopInset: configuration.contentInsets.top
         )
@@ -550,17 +558,18 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
                 idiom: environment.traitCollection.userInterfaceIdiom
             )
             let spacing = configuration.interItemSpacing
-            let itemWidth = metrics.rowHeight
+            let itemWidth = metrics.itemWidth
+            let rowHeight = metrics.rowHeight
 
             let itemSize = NSCollectionLayoutSize(
                 widthDimension: .absolute(itemWidth),
-                heightDimension: .absolute(itemWidth)
+                heightDimension: .absolute(rowHeight)
             )
             let item = NSCollectionLayoutItem(layoutSize: itemSize)
 
             let groupSize = NSCollectionLayoutSize(
                 widthDimension: .fractionalWidth(1.0),
-                heightDimension: .absolute(itemWidth)
+                heightDimension: .absolute(rowHeight)
             )
             let group = NSCollectionLayoutGroup.horizontal(
                 layoutSize: groupSize,
