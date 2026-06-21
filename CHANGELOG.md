@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-06-22
+
+### Added
+
+- `isAnimatedWebP` on `ItemDisplayable` (default `false`) to opt in to animated WebP playback for items whose URL points to an animated WebP file.
+- Multi-frame image decoding via ImageIO when `isAnimatedWebP` is `true`, with downsampled frames (max 300px) and frame timing from WebP/GIF metadata.
+- Animated playback in `ItemImageCell` using `UIImageView` animation; animation pauses when cells scroll off screen and resumes when visible.
+- `LoadedImage` / `AnimatedImageSequence` types and cost-based memory caching for animated sequences (total frame bytes count toward the 50 MB limit).
+
+### Documentation
+
+- README and DocC updated with animated WebP usage and `isAnimatedWebP` API notes.
+
+### Tests
+
+- Added coverage for default `isAnimatedWebP`, multi-frame decode, animated cache round-trip, and cell animation cleanup on reuse.
+
 ## [1.6.0] - 2026-06-21
 
 ### Changed

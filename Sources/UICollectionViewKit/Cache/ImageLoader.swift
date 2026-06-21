@@ -4,29 +4,30 @@ actor ImageLoader {
     static let shared = ImageLoader()
 
     private let cache = PersistentImageCache.shared
-    private var inFlightTasks: [String: Task<UIImage?, Never>] = [:]
+    private var inFlightTasks: [String: Task<LoadedImage?, Never>] = [:]
     private var availableDownloadSlots = 4
     private var downloadSlotWaiters: [CheckedContinuation<Void, Never>] = []
 
-    func loadImage(itemID: String, from url: URL) async -> UIImage? {
+    func loadImage(itemID: String, from url: URL, isAnimatedWebP: Bool) async -> LoadedImage? {
         if Task.isCancelled { return nil }
 
-        if let cached = await cache.image(for: itemID) {
+        if let cached = await cache.loadedImage(for: itemID, isAnimatedWebP: isAnimatedWebP) {
             return cached
         }
 
         if Task.isCancelled { return nil }
 
-        if let existing = inFlightTasks[itemID] {
-            let image = await existing.value
+        let taskKey = Self.taskKey(itemID: itemID, isAnimatedWebP: isAnimatedWebP)
+        if let existing = inFlightTasks[taskKey] {
+            let loadedImage = await existing.value
             if Task.isCancelled { return nil }
-            return image
+            return loadedImage
         }
 
-        let task = Task<UIImage?, Never> {
+        let task = Task<LoadedImage?, Never> {
             if Task.isCancelled { return nil }
 
-            if let cached = await cache.image(for: itemID) {
+            if let cached = await cache.loadedImage(for: itemID, isAnimatedWebP: isAnimatedWebP) {
                 return cached
             }
 
@@ -35,7 +36,7 @@ actor ImageLoader {
 
             if Task.isCancelled { return nil }
 
-            if let cached = await cache.image(for: itemID) {
+            if let cached = await cache.loadedImage(for: itemID, isAnimatedWebP: isAnimatedWebP) {
                 return cached
             }
 
@@ -46,15 +47,15 @@ actor ImageLoader {
                     return nil
                 }
 
-                let image = await decodeImage(fromFileAt: tempURL)
+                let loadedImage = await decodeImage(fromFileAt: tempURL, isAnimatedWebP: isAnimatedWebP)
                 if Task.isCancelled {
                     try? FileManager.default.removeItem(at: tempURL)
                     return nil
                 }
 
-                if let image {
-                    await cache.storeDownloadedFile(from: tempURL, image: image, for: itemID)
-                    return image
+                if let loadedImage {
+                    await cache.storeDownloadedFile(from: tempURL, loadedImage: loadedImage, for: itemID)
+                    return loadedImage
                 }
 
                 try? FileManager.default.removeItem(at: tempURL)
@@ -64,15 +65,21 @@ actor ImageLoader {
             }
         }
 
-        inFlightTasks[itemID] = task
-        let image = await task.value
-        inFlightTasks[itemID] = nil
-        return image
+        inFlightTasks[taskKey] = task
+        let loadedImage = await task.value
+        inFlightTasks[taskKey] = nil
+        return loadedImage
     }
 
     func cancel(itemID: String) {
-        inFlightTasks[itemID]?.cancel()
-        inFlightTasks[itemID] = nil
+        inFlightTasks.filter { $0.key.hasPrefix(itemID + "|") }.keys.forEach { key in
+            inFlightTasks[key]?.cancel()
+            inFlightTasks[key] = nil
+        }
+    }
+
+    private static func taskKey(itemID: String, isAnimatedWebP: Bool) -> String {
+        "\(itemID)|\(isAnimatedWebP ? "animated" : "static")"
     }
 
     private func acquireDownloadSlot() async {
@@ -95,9 +102,9 @@ actor ImageLoader {
         }
     }
 
-    private func decodeImage(fromFileAt fileURL: URL) async -> UIImage? {
+    private func decodeImage(fromFileAt fileURL: URL, isAnimatedWebP: Bool) async -> LoadedImage? {
         await Task.detached(priority: .utility) {
-            ImageDownsampler.image(fromFileAt: fileURL)
+            ImageDownsampler.loadedImage(fromFileAt: fileURL, isAnimatedWebP: isAnimatedWebP)
         }.value
     }
 }
@@ -107,16 +114,21 @@ enum ImageLoadHandle {
     static func load(
         itemID: String,
         url: URL,
+        isAnimatedWebP: Bool,
         token: UUID,
-        onUpdate: @escaping @MainActor (UUID, UIImage?) -> Void
+        onUpdate: @escaping @MainActor (UUID, LoadedImage?) -> Void
     ) {
         ImageLoadTaskStore.shared.storeItemID(itemID, for: token)
 
         let task = Task {
-            let image = await ImageLoader.shared.loadImage(itemID: itemID, from: url)
+            let loadedImage = await ImageLoader.shared.loadImage(
+                itemID: itemID,
+                from: url,
+                isAnimatedWebP: isAnimatedWebP
+            )
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                onUpdate(token, image)
+                onUpdate(token, loadedImage)
             }
             await ImageLoadTaskStore.shared.finish(token: token)
         }

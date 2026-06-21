@@ -4,18 +4,52 @@ import UIKit
 
 enum ImageDownsampler {
     static let maxPixelSize: CGFloat = 300
+    static let defaultFrameDelay: TimeInterval = 0.1
 
-    static func image(fromFileAt fileURL: URL) -> UIImage? {
+    static func loadedImage(fromFileAt fileURL: URL, isAnimatedWebP: Bool) -> LoadedImage? {
         let options: [CFString: Any] = [
             kCGImageSourceShouldCache: false
         ]
         guard let source = CGImageSourceCreateWithURL(fileURL as CFURL, options as CFDictionary) else {
             return nil
         }
-        return thumbnail(from: source)
+
+        if isAnimatedWebP, let sequence = animatedSequence(from: source) {
+            return .animated(sequence)
+        }
+
+        guard let image = thumbnail(from: source, at: 0) else {
+            return nil
+        }
+        return .static(image)
     }
 
-    private static func thumbnail(from source: CGImageSource) -> UIImage? {
+    static func image(fromFileAt fileURL: URL) -> UIImage? {
+        loadedImage(fromFileAt: fileURL, isAnimatedWebP: false)?.posterImage
+    }
+
+    private static func animatedSequence(from source: CGImageSource) -> AnimatedImageSequence? {
+        let frameCount = CGImageSourceGetCount(source)
+        guard frameCount > 1 else { return nil }
+
+        var frames: [UIImage] = []
+        var totalDuration: TimeInterval = 0
+
+        for index in 0..<frameCount {
+            guard let frame = thumbnail(from: source, at: index) else { continue }
+            frames.append(frame)
+            totalDuration += frameDelay(at: index, in: source)
+        }
+
+        guard frames.count > 1 else { return nil }
+        if totalDuration <= 0 {
+            totalDuration = Double(frames.count) * defaultFrameDelay
+        }
+
+        return AnimatedImageSequence(frames: frames, duration: totalDuration)
+    }
+
+    private static func thumbnail(from source: CGImageSource, at index: Int) -> UIImage? {
         let downsampleOptions: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceShouldCacheImmediately: false,
@@ -23,21 +57,51 @@ enum ImageDownsampler {
             kCGImageSourceThumbnailMaxPixelSize: maxPixelSize
         ]
 
-        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, downsampleOptions as CFDictionary) else {
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, index, downsampleOptions as CFDictionary) else {
             return nil
         }
 
         return UIImage(cgImage: cgImage)
+    }
+
+    private static func frameDelay(at index: Int, in source: CGImageSource) -> TimeInterval {
+        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil) as? [CFString: Any] else {
+            return defaultFrameDelay
+        }
+
+        if let gifProperties = properties[kCGImagePropertyGIFDictionary] as? [CFString: Any] {
+            if let delay = gifProperties[kCGImagePropertyGIFUnclampedDelayTime] as? TimeInterval, delay > 0 {
+                return delay
+            }
+            if let delay = gifProperties[kCGImagePropertyGIFDelayTime] as? TimeInterval, delay > 0 {
+                return delay
+            }
+        }
+
+        if let webpProperties = properties[kCGImagePropertyWebPDictionary] as? [CFString: Any] {
+            if let delay = webpProperties[kCGImagePropertyWebPUnclampedDelayTime] as? TimeInterval, delay > 0 {
+                return delay
+            }
+            if let delay = webpProperties[kCGImagePropertyWebPDelayTime] as? TimeInterval, delay > 0 {
+                return delay
+            }
+        }
+
+        return defaultFrameDelay
     }
 }
 
 actor PersistentImageCache {
     static let shared = PersistentImageCache()
 
-    nonisolated(unsafe) private let memoryCache = NSCache<NSString, UIImage>()
+    nonisolated(unsafe) private let memoryCache = NSCache<NSString, LoadedImageBox>()
+
+    nonisolated func memoryLoadedImage(for itemID: String) -> LoadedImage? {
+        memoryCache.object(forKey: itemID as NSString)?.value
+    }
 
     nonisolated func memoryImage(for itemID: String) -> UIImage? {
-        memoryCache.object(forKey: itemID as NSString)
+        memoryLoadedImage(for: itemID)?.posterImage
     }
 
     private let fileManager = FileManager.default
@@ -52,26 +116,31 @@ actor PersistentImageCache {
         try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
     }
 
-    func image(for itemID: String) -> UIImage? {
+    func loadedImage(for itemID: String, isAnimatedWebP: Bool) -> LoadedImage? {
         let key = itemID as NSString
 
-        if let cached = memoryCache.object(forKey: key) {
-            return cached
+        if let cached = memoryCache.object(forKey: key)?.value,
+           let compatible = compatibleLoadedImage(cached, isAnimatedWebP: isAnimatedWebP) {
+            return compatible
         }
 
         let fileURL = diskURL(for: itemID)
         guard fileManager.fileExists(atPath: fileURL.path),
-              let image = ImageDownsampler.image(fromFileAt: fileURL)
+              let loadedImage = ImageDownsampler.loadedImage(fromFileAt: fileURL, isAnimatedWebP: isAnimatedWebP)
         else {
             return nil
         }
 
-        cacheInMemory(image, forKey: key)
-        return image
+        cacheInMemory(loadedImage, forKey: key)
+        return loadedImage
     }
 
-    /// Moves a downloaded temp file into the disk cache and stores the already-decoded thumbnail in memory.
-    func storeDownloadedFile(from sourceURL: URL, image: UIImage, for itemID: String) {
+    func image(for itemID: String) -> UIImage? {
+        loadedImage(for: itemID, isAnimatedWebP: false)?.posterImage
+    }
+
+    /// Moves a downloaded temp file into the disk cache and stores the decoded image in memory.
+    func storeDownloadedFile(from sourceURL: URL, loadedImage: LoadedImage, for itemID: String) {
         let key = itemID as NSString
         let fileURL = diskURL(for: itemID)
 
@@ -81,7 +150,18 @@ actor PersistentImageCache {
             try? fileManager.removeItem(at: sourceURL)
         }
 
-        cacheInMemory(image, forKey: key)
+        cacheInMemory(loadedImage, forKey: key)
+    }
+
+    private func compatibleLoadedImage(_ cached: LoadedImage, isAnimatedWebP: Bool) -> LoadedImage? {
+        switch (cached, isAnimatedWebP) {
+        case (.static, false), (.animated, true):
+            return cached
+        case let (.animated(sequence), false):
+            return .static(sequence.posterFrame)
+        case (.static, true):
+            return nil
+        }
     }
 
     private func moveDownloadedFile(from sourceURL: URL, to destinationURL: URL) -> Bool {
@@ -99,8 +179,21 @@ actor PersistentImageCache {
         }
     }
 
-    private func cacheInMemory(_ image: UIImage, forKey key: NSString) {
-        memoryCache.setObject(image, forKey: key, cost: Self.estimatedMemoryCost(for: image))
+    private func cacheInMemory(_ loadedImage: LoadedImage, forKey key: NSString) {
+        memoryCache.setObject(
+            LoadedImageBox(loadedImage),
+            forKey: key,
+            cost: Self.estimatedMemoryCost(for: loadedImage)
+        )
+    }
+
+    private static func estimatedMemoryCost(for loadedImage: LoadedImage) -> Int {
+        switch loadedImage {
+        case let .static(image):
+            return estimatedMemoryCost(for: image)
+        case let .animated(sequence):
+            return sequence.frames.reduce(0) { $0 + estimatedMemoryCost(for: $1) }
+        }
     }
 
     private static func estimatedMemoryCost(for image: UIImage) -> Int {

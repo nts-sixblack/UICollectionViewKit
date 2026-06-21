@@ -5,6 +5,8 @@ final class ItemImageCell: UICollectionViewCell {
 
     private(set) var loadToken = UUID()
     private var currentItemID: String?
+    private var currentIsAnimatedWebP = false
+    private var shouldAnimateWhenVisible = false
     private var hostedOverlayView: UIView?
     private var appearance = ItemGridConfiguration.default
 
@@ -67,7 +69,9 @@ final class ItemImageCell: UICollectionViewCell {
         cancelCurrentLoad()
         loadToken = UUID()
         currentItemID = nil
-        imageView.image = nil
+        currentIsAnimatedWebP = false
+        shouldAnimateWhenVisible = false
+        stopAnimationPlayback()
         activityIndicator.stopAnimating()
     }
 
@@ -79,17 +83,34 @@ final class ItemImageCell: UICollectionViewCell {
 
     func configure<I: ItemDisplayable>(
         with url: URL,
+        isAnimatedWebP: Bool,
         overlayConfiguration: ItemOverlayConfiguration<I>?,
         item: I,
         appearance configuration: ItemGridConfiguration
     ) {
         applyAppearance(from: configuration)
-        configureImage(itemID: item.itemID, url: url)
+        configureImage(itemID: item.itemID, url: url, isAnimatedWebP: isAnimatedWebP)
         configureOverlay(overlayConfiguration: overlayConfiguration, item: item)
     }
 
-    private func configureImage(itemID: String, url: URL) {
-        if currentItemID == itemID, imageView.image != nil {
+    func pauseAnimationIfNeeded() {
+        guard shouldAnimateWhenVisible, imageView.isAnimating else { return }
+        imageView.stopAnimating()
+    }
+
+    func resumeAnimationIfNeeded() {
+        guard shouldAnimateWhenVisible, !imageView.isAnimating, imageView.animationImages != nil else { return }
+        imageView.startAnimating()
+    }
+
+    internal var hasActiveAnimatedPlayback: Bool {
+        shouldAnimateWhenVisible && imageView.animationImages != nil
+    }
+
+    private func configureImage(itemID: String, url: URL, isAnimatedWebP: Bool) {
+        if currentItemID == itemID,
+           currentIsAnimatedWebP == isAnimatedWebP,
+           hasDisplayableContent {
             activityIndicator.stopAnimating()
             return
         }
@@ -98,21 +119,69 @@ final class ItemImageCell: UICollectionViewCell {
         loadToken = UUID()
         let token = loadToken
         currentItemID = itemID
+        currentIsAnimatedWebP = isAnimatedWebP
 
-        if let cached = PersistentImageCache.shared.memoryImage(for: itemID) {
-            imageView.image = cached
+        if let cached = PersistentImageCache.shared.memoryLoadedImage(for: itemID),
+           let loadedImage = compatibleLoadedImage(cached, isAnimatedWebP: isAnimatedWebP) {
+            applyLoadedImage(loadedImage, animateIfVisible: true)
             activityIndicator.stopAnimating()
             return
         }
 
+        stopAnimationPlayback()
         imageView.image = nil
         activityIndicator.startAnimating()
 
-        ImageLoadHandle.load(itemID: itemID, url: url, token: token) { [weak self] receivedToken, image in
+        ImageLoadHandle.load(
+            itemID: itemID,
+            url: url,
+            isAnimatedWebP: isAnimatedWebP,
+            token: token
+        ) { [weak self] receivedToken, loadedImage in
             guard let self, receivedToken == self.loadToken else { return }
             self.activityIndicator.stopAnimating()
-            self.imageView.image = image
+            guard let loadedImage else { return }
+            self.applyLoadedImage(loadedImage, animateIfVisible: true)
         }
+    }
+
+    private var hasDisplayableContent: Bool {
+        imageView.image != nil || imageView.animationImages != nil
+    }
+
+    private func compatibleLoadedImage(_ cached: LoadedImage, isAnimatedWebP: Bool) -> LoadedImage? {
+        switch (cached, isAnimatedWebP) {
+        case (.static, false), (.animated, true):
+            return cached
+        case let (.animated(sequence), false):
+            return .static(sequence.posterFrame)
+        case (.static, true):
+            return nil
+        }
+    }
+
+    private func applyLoadedImage(_ loadedImage: LoadedImage, animateIfVisible: Bool) {
+        switch loadedImage {
+        case let .static(image):
+            stopAnimationPlayback()
+            imageView.image = image
+        case let .animated(sequence):
+            imageView.image = sequence.posterFrame
+            imageView.animationImages = sequence.frames
+            imageView.animationDuration = sequence.duration
+            imageView.animationRepeatCount = 0
+            shouldAnimateWhenVisible = true
+            if animateIfVisible {
+                imageView.startAnimating()
+            }
+        }
+    }
+
+    private func stopAnimationPlayback() {
+        shouldAnimateWhenVisible = false
+        imageView.stopAnimating()
+        imageView.animationImages = nil
+        imageView.image = nil
     }
 
     private func configureOverlay<I: ItemDisplayable>(

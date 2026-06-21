@@ -89,6 +89,7 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
             }
             cell.configure(
                 with: item.imageURL,
+                isAnimatedWebP: item.isAnimatedWebP,
                 overlayConfiguration: self.itemOverlayConfiguration,
                 item: item,
                 appearance: self.configuration
@@ -206,6 +207,16 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
         onItemSelected?(item)
     }
 
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        guard let imageCell = cell as? ItemImageCell else { return }
+        imageCell.resumeAnimationIfNeeded()
+    }
+
+    func collectionView(_ collectionView: UICollectionView, didEndDisplaying cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        guard let imageCell = cell as? ItemImageCell else { return }
+        imageCell.pauseAnimationIfNeeded()
+    }
+
     func reloadVisibleItemOverlays() {
         for indexPath in collectionView.indexPathsForVisibleItems {
             guard let item = dataSource.itemIdentifier(for: indexPath),
@@ -216,6 +227,7 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
 
             cell.configure(
                 with: item.imageURL,
+                isAnimatedWebP: item.isAnimatedWebP,
                 overlayConfiguration: itemOverlayConfiguration,
                 item: item,
                 appearance: configuration
@@ -233,6 +245,7 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
 
             cell.configure(
                 with: item.imageURL,
+                isAnimatedWebP: item.isAnimatedWebP,
                 overlayConfiguration: itemOverlayConfiguration,
                 item: item,
                 appearance: configuration

@@ -8,6 +8,8 @@ UICollectionViewKit wraps a UIKit-based category + grid experience in a single S
 
 Images are cached in memory and on disk by ``ItemDisplayable/itemID``, not by ``ItemDisplayable/imageURL``. Use a stable, globally unique `itemID` so signed or rotating image URLs reuse the same cached thumbnail.
 
+Set ``ItemDisplayable/isAnimatedWebP`` to `true` on items whose URL is an animated WebP file. The library decodes downsampled frames, plays the animation in the grid cell, and pauses playback when the cell scrolls off screen. Defaults to `false` for static images.
+
 Customize category tab appearance with ``CategoryHeaderConfiguration`` (normal vs selected pill styles, spacing, insets, header height) and the item grid with ``ItemGridConfiguration`` (column counts, spacing, content insets, corner radius, item aspect ratio). Use ``CategoryItemBackgroundConfiguration`` for container background colors. Omit all to keep the built-in defaults.
 
 ## Topics

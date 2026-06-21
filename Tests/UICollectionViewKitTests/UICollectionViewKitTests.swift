@@ -1,7 +1,24 @@
+import ImageIO
 import XCTest
 @testable import UICollectionViewKit
 
 final class UICollectionViewKitTests: XCTestCase {
+    func testItemDisplayableDefaultIsAnimatedWebPIsFalse() {
+        struct TestItem: ItemDisplayable {
+            let itemID: String
+            let categoryID: String
+            let imageURL: URL
+        }
+
+        let item = TestItem(
+            itemID: "1",
+            categoryID: "nature",
+            imageURL: URL(string: "https://example.com/image.webp")!
+        )
+
+        XCTAssertFalse(item.isAnimatedWebP)
+    }
+
     func testItemDisplayableConformance() {
         struct TestItem: ItemDisplayable {
             let itemID: String
@@ -115,6 +132,7 @@ final class UICollectionViewKitTests: XCTestCase {
 
         cell.configure(
             with: item1.imageURL,
+            isAnimatedWebP: item1.isAnimatedWebP,
             overlayConfiguration: configuration,
             item: item1,
             appearance: .default
@@ -123,6 +141,7 @@ final class UICollectionViewKitTests: XCTestCase {
 
         cell.configure(
             with: item2.imageURL,
+            isAnimatedWebP: item2.isAnimatedWebP,
             overlayConfiguration: configuration,
             item: item2,
             appearance: .default
@@ -393,13 +412,13 @@ final class UICollectionViewKitTests: XCTestCase {
 
         await PersistentImageCache.shared.storeDownloadedFile(
             from: sourceURL,
-            image: sourceImage,
+            loadedImage: .static(sourceImage),
             for: itemID
         )
 
         XCTAssertNotNil(PersistentImageCache.shared.memoryImage(for: itemID))
 
-        let cached = await PersistentImageCache.shared.image(for: itemID)
+        let cached = await PersistentImageCache.shared.loadedImage(for: itemID, isAnimatedWebP: false)
         XCTAssertNotNil(cached)
     }
 
@@ -415,15 +434,19 @@ final class UICollectionViewKitTests: XCTestCase {
 
         await PersistentImageCache.shared.storeDownloadedFile(
             from: sourceURL,
-            image: sourceImage,
+            loadedImage: .static(sourceImage),
             for: itemID
         )
 
-        let cached = await PersistentImageCache.shared.image(for: itemID)
+        let cached = await PersistentImageCache.shared.loadedImage(for: itemID, isAnimatedWebP: false)
         XCTAssertNotNil(cached)
 
         let otherURL = URL(string: "https://example.com/signed-image?token=\(UUID().uuidString)")!
-        let loaded = await ImageLoader.shared.loadImage(itemID: itemID, from: otherURL)
+        let loaded = await ImageLoader.shared.loadImage(
+            itemID: itemID,
+            from: otherURL,
+            isAnimatedWebP: false
+        )
         XCTAssertNotNil(loaded)
     }
 
@@ -439,12 +462,96 @@ final class UICollectionViewKitTests: XCTestCase {
 
         await PersistentImageCache.shared.storeDownloadedFile(
             from: sourceURL,
-            image: sourceImage,
+            loadedImage: .static(sourceImage),
             for: itemID
         )
 
-        let cached = await PersistentImageCache.shared.image(for: "different-\(itemID)")
+        let cached = await PersistentImageCache.shared.loadedImage(for: "different-\(itemID)", isAnimatedWebP: false)
         XCTAssertNil(cached)
+    }
+
+    func testAnimatedImageDecoderReadsMultiFrameGIF() throws {
+        let sourceURL = try makeTestAnimatedGIFFile()
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+
+        let loadedImage = ImageDownsampler.loadedImage(fromFileAt: sourceURL, isAnimatedWebP: true)
+        guard case let .animated(sequence)? = loadedImage else {
+            XCTFail("Expected animated loaded image")
+            return
+        }
+
+        XCTAssertGreaterThanOrEqual(sequence.frames.count, 2)
+        XCTAssertGreaterThan(sequence.duration, 0)
+    }
+
+    func testAnimatedImageCacheStoresAndRetrievesByItemID() async throws {
+        let itemID = "animated-cache-test-\(UUID().uuidString)"
+        let sourceURL = try makeTestAnimatedGIFFile()
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+
+        guard case let .animated(sequence)? = ImageDownsampler.loadedImage(fromFileAt: sourceURL, isAnimatedWebP: true) else {
+            XCTFail("Expected animated loaded image")
+            return
+        }
+
+        await PersistentImageCache.shared.storeDownloadedFile(
+            from: sourceURL,
+            loadedImage: .animated(sequence),
+            for: itemID
+        )
+
+        XCTAssertNotNil(PersistentImageCache.shared.memoryLoadedImage(for: itemID))
+
+        let cached = await PersistentImageCache.shared.loadedImage(for: itemID, isAnimatedWebP: true)
+        guard case .animated = cached else {
+            XCTFail("Expected animated cache entry")
+            return
+        }
+    }
+
+    @MainActor
+    func testItemImageCellStopsAnimationOnReuse() async throws {
+        let itemID = "animated-cell-\(UUID().uuidString)"
+        let sourceURL = try makeTestAnimatedGIFFile()
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+
+        guard case let .animated(sequence)? = ImageDownsampler.loadedImage(fromFileAt: sourceURL, isAnimatedWebP: true) else {
+            XCTFail("Expected animated loaded image")
+            return
+        }
+
+        await PersistentImageCache.shared.storeDownloadedFile(
+            from: sourceURL,
+            loadedImage: .animated(sequence),
+            for: itemID
+        )
+
+        struct AnimatedTestItem: ItemDisplayable {
+            let itemID: String
+            let categoryID: String
+            let imageURL: URL
+            var isAnimatedWebP: Bool { true }
+        }
+
+        let item = AnimatedTestItem(
+            itemID: itemID,
+            categoryID: "nature",
+            imageURL: sourceURL
+        )
+
+        let cell = ItemImageCell(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        cell.configure(
+            with: sourceURL,
+            isAnimatedWebP: true,
+            overlayConfiguration: nil as ItemOverlayConfiguration<AnimatedTestItem>?,
+            item: item,
+            appearance: .default
+        )
+
+        XCTAssertTrue(cell.hasActiveAnimatedPlayback)
+
+        cell.prepareForReuse()
+        XCTAssertFalse(cell.hasActiveAnimatedPlayback)
     }
 }
 
@@ -457,6 +564,43 @@ private func makeTestImageFile() throws -> URL {
     let url = FileManager.default.temporaryDirectory
         .appendingPathComponent("\(UUID().uuidString).png")
     try data.write(to: url)
+    return url
+}
+
+private func makeTestAnimatedGIFFile() throws -> URL {
+    let url = FileManager.default.temporaryDirectory
+        .appendingPathComponent("\(UUID().uuidString).gif")
+
+    guard let destination = CGImageDestinationCreateWithURL(url as CFURL, "com.compuserve.gif" as CFString, 2, nil) else {
+        throw NSError(domain: "UICollectionViewKitTests", code: 1)
+    }
+
+    let frameProperties: [CFString: Any] = [
+        kCGImagePropertyGIFDictionary: [
+            kCGImagePropertyGIFDelayTime: 0.1
+        ]
+    ]
+
+    let firstFrame = UIGraphicsImageRenderer(size: CGSize(width: 10, height: 10)).image { context in
+        UIColor.red.setFill()
+        context.fill(CGRect(x: 0, y: 0, width: 10, height: 10))
+    }
+    let secondFrame = UIGraphicsImageRenderer(size: CGSize(width: 10, height: 10)).image { context in
+        UIColor.blue.setFill()
+        context.fill(CGRect(x: 0, y: 0, width: 10, height: 10))
+    }
+
+    guard let firstCGImage = firstFrame.cgImage, let secondCGImage = secondFrame.cgImage else {
+        throw NSError(domain: "UICollectionViewKitTests", code: 2)
+    }
+
+    CGImageDestinationAddImage(destination, firstCGImage, frameProperties as CFDictionary)
+    CGImageDestinationAddImage(destination, secondCGImage, frameProperties as CFDictionary)
+
+    guard CGImageDestinationFinalize(destination) else {
+        throw NSError(domain: "UICollectionViewKitTests", code: 3)
+    }
+
     return url
 }
 

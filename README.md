@@ -8,7 +8,7 @@ A Swift Package that embeds a high-performance UIKit collection view inside Swif
 - **Category tabs** — Horizontal category picker with per-category scroll position restoration.
 - **Customizable UI** — Configure category tab styles (normal/selected), spacing, grid layout (columns, insets, corner radius, aspect ratio), and container background colors.
 - **Bidirectional pagination** — Load more items when scrolling down; load previous pages when scrolling up.
-- **Image loading** — Memory + disk cache keyed by item ID with ImageIO downsampling and concurrent download limits.
+- **Image loading** — Memory + disk cache keyed by item ID with ImageIO downsampling, concurrent download limits, and optional animated WebP playback.
 - **Zero third-party dependencies** — UIKit, SwiftUI, ImageIO, and CryptoKit only.
 
 ## Requirements
@@ -30,7 +30,7 @@ Or add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.6.0"),
+    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.7.0"),
 ],
 targets: [
     .target(
@@ -60,6 +60,8 @@ struct MyItem: ItemDisplayable {
     let itemID: String
     let categoryID: String
     let imageURL: URL
+    // Set to true when imageURL points to an animated WebP file.
+    let isAnimatedWebP: Bool
 }
 ```
 
@@ -255,12 +257,27 @@ When the user selects a different category, the current scroll offset is saved a
 
 Thumbnails are cached in memory and on disk by `itemID`, not `imageURL`. Provide a stable, globally unique `itemID` on each `ItemDisplayable` model so signed or rotating image URLs reuse the same cached file.
 
+### Animated WebP
+
+Set `isAnimatedWebP` to `true` on items whose `imageURL` is an animated WebP. The library decodes all frames (downsampled to 300px max), caches the raw file on disk, and plays the animation in the grid cell. Omit the property or leave it `false` for static images (including static WebP) to keep the lightweight single-frame decode path.
+
+Animation pauses when a cell scrolls off screen and resumes when it becomes visible again, reducing CPU use while scrolling.
+
+```swift
+struct MyItem: ItemDisplayable {
+    let itemID: String
+    let categoryID: String
+    let imageURL: URL
+    var isAnimatedWebP: Bool { true }
+}
+```
+
 ## Public API
 
 | Symbol | Description |
 |---|---|
 | `CategoryDisplayable` | Protocol for category tab models (`categoryID`, `categoryTitle`). |
-| `ItemDisplayable` | Protocol for grid item models (`itemID`, `categoryID`, `imageURL`). |
+| `ItemDisplayable` | Protocol for grid item models (`itemID`, `categoryID`, `imageURL`, optional `isAnimatedWebP`). |
 | `CategoryItemPaginationProviding` | Protocol for paginated data access. |
 | `ItemOverlayConfiguration` | Factory + updater for a custom UIKit overlay on each item. Pass `stateVersion` to refresh visible overlays when external overlay state changes. |
 | `CategoryItemStyle` | Appearance for one category tab state (colors, font, corner radius, content insets). |
