@@ -1,6 +1,6 @@
 # UICollectionViewKit
 
-A Swift Package that embeds a high-performance UIKit collection view inside SwiftUI. It provides category tabs, bidirectional pagination, and built-in image caching with downsampling.
+A Swift Package that embeds a high-performance UIKit collection view inside SwiftUI. It provides category tabs, bidirectional pagination, and built-in image caching keyed by item ID with downsampling.
 
 ## Features
 
@@ -8,7 +8,7 @@ A Swift Package that embeds a high-performance UIKit collection view inside Swif
 - **Category tabs** — Horizontal category picker with per-category scroll position restoration.
 - **Customizable UI** — Configure category tab styles (normal/selected), spacing, grid layout (columns, insets, corner radius, aspect ratio), and container background colors.
 - **Bidirectional pagination** — Load more items when scrolling down; load previous pages when scrolling up.
-- **Image loading** — Memory + disk cache with ImageIO downsampling and concurrent download limits.
+- **Image loading** — Memory + disk cache keyed by item ID with ImageIO downsampling and concurrent download limits.
 - **Zero third-party dependencies** — UIKit, SwiftUI, ImageIO, and CryptoKit only.
 
 ## Requirements
@@ -30,7 +30,7 @@ Or add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.5.0"),
+    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.6.0"),
 ],
 targets: [
     .target(
@@ -236,7 +236,7 @@ CategoryItemCollectionView (SwiftUI)
 CategoryItemViewController
    ├── CategoryHeaderView      ← horizontal category tabs
    └── ItemGridCollectionView  ← paginated image grid
-           └── ItemImageCell   ← async image loading
+           └── ItemImageCell   ← async image loading (cache keyed by item ID)
                    └── ImageLoader / PersistentImageCache
 ```
 
@@ -250,6 +250,10 @@ CategoryItemViewController
 ### Category switching
 
 When the user selects a different category, the current scroll offset is saved and restored when they return to that category.
+
+### Image caching
+
+Thumbnails are cached in memory and on disk by `itemID`, not `imageURL`. Provide a stable, globally unique `itemID` on each `ItemDisplayable` model so signed or rotating image URLs reuse the same cached file.
 
 ## Public API
 

@@ -6,6 +6,8 @@ A UIKit collection view kit for SwiftUI with category tabs, bidirectional pagina
 
 UICollectionViewKit wraps a UIKit-based category + grid experience in a single SwiftUI view. You provide your own models and pagination logic through three protocols, and the library handles scroll state, diffable data sources, and image loading.
 
+Images are cached in memory and on disk by ``ItemDisplayable/itemID``, not by ``ItemDisplayable/imageURL``. Use a stable, globally unique `itemID` so signed or rotating image URLs reuse the same cached thumbnail.
+
 Customize category tab appearance with ``CategoryHeaderConfiguration`` (normal vs selected pill styles, spacing, insets, header height) and the item grid with ``ItemGridConfiguration`` (column counts, spacing, content insets, corner radius, item aspect ratio). Use ``CategoryItemBackgroundConfiguration`` for container background colors. Omit all to keep the built-in defaults.
 
 ## Topics

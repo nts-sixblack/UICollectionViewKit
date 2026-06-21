@@ -4,7 +4,7 @@ final class ItemImageCell: UICollectionViewCell {
     static let reuseIdentifier = "ItemImageCell"
 
     private(set) var loadToken = UUID()
-    private var currentURL: URL?
+    private var currentItemID: String?
     private var hostedOverlayView: UIView?
     private var appearance = ItemGridConfiguration.default
 
@@ -66,7 +66,7 @@ final class ItemImageCell: UICollectionViewCell {
         super.prepareForReuse()
         cancelCurrentLoad()
         loadToken = UUID()
-        currentURL = nil
+        currentItemID = nil
         imageView.image = nil
         activityIndicator.stopAnimating()
     }
@@ -84,12 +84,12 @@ final class ItemImageCell: UICollectionViewCell {
         appearance configuration: ItemGridConfiguration
     ) {
         applyAppearance(from: configuration)
-        configureImage(with: url)
+        configureImage(itemID: item.itemID, url: url)
         configureOverlay(overlayConfiguration: overlayConfiguration, item: item)
     }
 
-    private func configureImage(with url: URL) {
-        if currentURL == url, imageView.image != nil {
+    private func configureImage(itemID: String, url: URL) {
+        if currentItemID == itemID, imageView.image != nil {
             activityIndicator.stopAnimating()
             return
         }
@@ -97,9 +97,9 @@ final class ItemImageCell: UICollectionViewCell {
         cancelCurrentLoad()
         loadToken = UUID()
         let token = loadToken
-        currentURL = url
+        currentItemID = itemID
 
-        if let cached = PersistentImageCache.shared.memoryImage(for: url) {
+        if let cached = PersistentImageCache.shared.memoryImage(for: itemID) {
             imageView.image = cached
             activityIndicator.stopAnimating()
             return
@@ -108,7 +108,7 @@ final class ItemImageCell: UICollectionViewCell {
         imageView.image = nil
         activityIndicator.startAnimating()
 
-        ImageLoadHandle.load(url: url, token: token) { [weak self] receivedToken, image in
+        ImageLoadHandle.load(itemID: itemID, url: url, token: token) { [weak self] receivedToken, image in
             guard let self, receivedToken == self.loadToken else { return }
             self.activityIndicator.stopAnimating()
             self.imageView.image = image
@@ -144,6 +144,6 @@ final class ItemImageCell: UICollectionViewCell {
     }
 
     private func cancelCurrentLoad() {
-        ImageLoadHandle.cancel(token: loadToken, url: currentURL)
+        ImageLoadHandle.cancel(token: loadToken, itemID: currentItemID)
     }
 }

@@ -380,6 +380,84 @@ final class UICollectionViewKitTests: XCTestCase {
         }
         XCTAssertEqual(gridCollectionView.backgroundColor, .systemBlue)
     }
+
+    func testImageCacheStoresAndRetrievesByItemID() async throws {
+        let itemID = "cache-test-\(UUID().uuidString)"
+        let sourceURL = try makeTestImageFile()
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+
+        guard let sourceImage = UIImage(contentsOfFile: sourceURL.path) else {
+            XCTFail("Expected test image at \(sourceURL.path)")
+            return
+        }
+
+        await PersistentImageCache.shared.storeDownloadedFile(
+            from: sourceURL,
+            image: sourceImage,
+            for: itemID
+        )
+
+        XCTAssertNotNil(PersistentImageCache.shared.memoryImage(for: itemID))
+
+        let cached = await PersistentImageCache.shared.image(for: itemID)
+        XCTAssertNotNil(cached)
+    }
+
+    func testImageCacheHitIsIndependentOfDownloadURL() async throws {
+        let itemID = "cache-test-\(UUID().uuidString)"
+        let sourceURL = try makeTestImageFile()
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+
+        guard let sourceImage = UIImage(contentsOfFile: sourceURL.path) else {
+            XCTFail("Expected test image at \(sourceURL.path)")
+            return
+        }
+
+        await PersistentImageCache.shared.storeDownloadedFile(
+            from: sourceURL,
+            image: sourceImage,
+            for: itemID
+        )
+
+        let cached = await PersistentImageCache.shared.image(for: itemID)
+        XCTAssertNotNil(cached)
+
+        let otherURL = URL(string: "https://example.com/signed-image?token=\(UUID().uuidString)")!
+        let loaded = await ImageLoader.shared.loadImage(itemID: itemID, from: otherURL)
+        XCTAssertNotNil(loaded)
+    }
+
+    func testImageCacheMissesForDifferentItemID() async throws {
+        let itemID = "cache-test-\(UUID().uuidString)"
+        let sourceURL = try makeTestImageFile()
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+
+        guard let sourceImage = UIImage(contentsOfFile: sourceURL.path) else {
+            XCTFail("Expected test image at \(sourceURL.path)")
+            return
+        }
+
+        await PersistentImageCache.shared.storeDownloadedFile(
+            from: sourceURL,
+            image: sourceImage,
+            for: itemID
+        )
+
+        let cached = await PersistentImageCache.shared.image(for: "different-\(itemID)")
+        XCTAssertNil(cached)
+    }
+}
+
+private func makeTestImageFile() throws -> URL {
+    let image = UIGraphicsImageRenderer(size: CGSize(width: 10, height: 10)).image { context in
+        UIColor.red.setFill()
+        context.fill(CGRect(x: 0, y: 0, width: 10, height: 10))
+    }
+    let data = try XCTUnwrap(image.pngData())
+    let url = FileManager.default.temporaryDirectory
+        .appendingPathComponent("\(UUID().uuidString).png")
+    try data.write(to: url)
+    return url
 }
 
 private struct TestGridItem: ItemDisplayable {

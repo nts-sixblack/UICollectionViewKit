@@ -34,10 +34,10 @@ enum ImageDownsampler {
 actor PersistentImageCache {
     static let shared = PersistentImageCache()
 
-    nonisolated(unsafe) private let memoryCache = NSCache<NSURL, UIImage>()
+    nonisolated(unsafe) private let memoryCache = NSCache<NSString, UIImage>()
 
-    nonisolated func memoryImage(for url: URL) -> UIImage? {
-        memoryCache.object(forKey: url as NSURL)
+    nonisolated func memoryImage(for itemID: String) -> UIImage? {
+        memoryCache.object(forKey: itemID as NSString)
     }
 
     private let fileManager = FileManager.default
@@ -52,14 +52,14 @@ actor PersistentImageCache {
         try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
     }
 
-    func image(for url: URL) -> UIImage? {
-        let key = url as NSURL
+    func image(for itemID: String) -> UIImage? {
+        let key = itemID as NSString
 
         if let cached = memoryCache.object(forKey: key) {
             return cached
         }
 
-        let fileURL = diskURL(for: url)
+        let fileURL = diskURL(for: itemID)
         guard fileManager.fileExists(atPath: fileURL.path),
               let image = ImageDownsampler.image(fromFileAt: fileURL)
         else {
@@ -71,9 +71,9 @@ actor PersistentImageCache {
     }
 
     /// Moves a downloaded temp file into the disk cache and stores the already-decoded thumbnail in memory.
-    func storeDownloadedFile(from sourceURL: URL, image: UIImage, for url: URL) {
-        let key = url as NSURL
-        let fileURL = diskURL(for: url)
+    func storeDownloadedFile(from sourceURL: URL, image: UIImage, for itemID: String) {
+        let key = itemID as NSString
+        let fileURL = diskURL(for: itemID)
 
         if fileManager.fileExists(atPath: fileURL.path) {
             try? fileManager.removeItem(at: sourceURL)
@@ -99,7 +99,7 @@ actor PersistentImageCache {
         }
     }
 
-    private func cacheInMemory(_ image: UIImage, forKey key: NSURL) {
+    private func cacheInMemory(_ image: UIImage, forKey key: NSString) {
         memoryCache.setObject(image, forKey: key, cost: Self.estimatedMemoryCost(for: image))
     }
 
@@ -110,8 +110,8 @@ actor PersistentImageCache {
         return cgImage.bytesPerRow * cgImage.height
     }
 
-    private func diskURL(for url: URL) -> URL {
-        let hash = SHA256.hash(data: Data(url.absoluteString.utf8))
+    private func diskURL(for itemID: String) -> URL {
+        let hash = SHA256.hash(data: Data(itemID.utf8))
         let filename = hash.map { String(format: "%02x", $0) }.joined()
         return cacheDirectory.appendingPathComponent(filename)
     }
