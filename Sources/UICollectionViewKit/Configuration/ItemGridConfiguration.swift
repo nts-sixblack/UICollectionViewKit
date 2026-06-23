@@ -30,7 +30,7 @@ public struct ItemGridConfiguration: Sendable {
     public var imageBackgroundColor: UIColor
     /// Cell height as a multiple of cell width. Default `1.0` produces square cells.
     public var itemHeightMultiplier: CGFloat
-    /// When an item has `isAnimatedWebP == true`, only indices divisible by this value play animation. Default `4`. Set to `1` to animate every eligible item.
+    /// When an item has an `animatedURL`, only indices divisible by this value play animation. Default `4`. Set to `1` to animate every eligible item.
     public var animatedWebPInterval: Int
 
     public init(

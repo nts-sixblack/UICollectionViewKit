@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-06-23
+
+### Changed
+
+- **Breaking:** Replaced `isAnimatedWebP` on `ItemDisplayable` with optional `animatedURL` for a separate animated WebP/GIF preview. `imageURL` is always the static poster; animation loads from `animatedURL` when present.
+- Image cache keys now distinguish static and animated variants per `itemID`, so poster and animation files are stored separately.
+- Memory cache limits increased to 100 MB and 250 entries to accommodate dual-variant caching.
+
+### Removed
+
+- **Breaking:** `isAnimatedWebP` on `ItemDisplayable`.
+
+### Migration
+
+```swift
+// Before (1.8.0)
+struct MyItem: ItemDisplayable {
+    let itemID: String
+    let categoryID: String
+    let imageURL: URL
+    var isAnimatedWebP: Bool { true }
+}
+
+// After (1.9.0)
+struct MyItem: ItemDisplayable {
+    let itemID: String
+    let categoryID: String
+    let imageURL: URL        // static poster
+    let animatedURL: URL?    // animated preview, or nil for static-only
+}
+```
+
+### Documentation
+
+- README and DocC updated for `animatedURL` and separate static/animated caching.
+
+### Tests
+
+- Added coverage for static/animated cache isolation per item ID and updated cell configuration tests for `animatedURL`.
+
 ## [1.8.0] - 2026-06-22
 
 ### Added

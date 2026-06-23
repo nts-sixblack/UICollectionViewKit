@@ -30,7 +30,7 @@ Or add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.8.0"),
+    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.9.0"),
 ],
 targets: [
     .target(
@@ -60,8 +60,8 @@ struct MyItem: ItemDisplayable {
     let itemID: String
     let categoryID: String
     let imageURL: URL
-    // Set to true when imageURL points to an animated WebP file.
-    let isAnimatedWebP: Bool
+    // Optional animated WebP/GIF URL played for configured grid positions.
+    let animatedURL: URL?
 }
 ```
 
@@ -255,13 +255,13 @@ When the user selects a different category, the current scroll offset is saved a
 
 ### Image caching
 
-Thumbnails are cached in memory and on disk by `itemID`, not `imageURL`. Provide a stable, globally unique `itemID` on each `ItemDisplayable` model so signed or rotating image URLs reuse the same cached file.
+Thumbnails are cached in memory and on disk by `itemID` plus image variant, not `imageURL`. Provide a stable, globally unique `itemID` on each `ItemDisplayable` model so signed or rotating image URLs reuse the same cached files.
 
 ### Animated WebP
 
-Set `isAnimatedWebP` to `true` on items whose `imageURL` is an animated WebP. The library decodes all frames (downsampled to 300px max), caches the raw file on disk, and plays the animation in the grid cell. Omit the property or leave it `false` for static images (including static WebP) to keep the lightweight single-frame decode path.
+Set `animatedURL` on items that have a separate animated WebP/GIF preview. The library shows `imageURL` first as the static poster, then decodes downsampled animated frames from `animatedURL`, caches the raw files on disk separately, and plays the animation in the grid cell. Omit the property or return `nil` to keep the lightweight static-only path.
 
-By default, `ItemGridConfiguration.animatedWebPInterval` is `4`, so only items at grid indices `0`, `4`, `8`, … play animation when `isAnimatedWebP` is `true`. Other eligible items show the poster frame only. Set `animatedWebPInterval` to `1` to animate every eligible item.
+By default, `ItemGridConfiguration.animatedWebPInterval` is `4`, so only items at grid indices `0`, `4`, `8`, … play animation when `animatedURL` exists. Other eligible items show `imageURL` only. Set `animatedWebPInterval` to `1` to animate every eligible item.
 
 Animation pauses when a cell scrolls off screen and resumes when it becomes visible again, reducing CPU use while scrolling.
 
@@ -270,7 +270,7 @@ struct MyItem: ItemDisplayable {
     let itemID: String
     let categoryID: String
     let imageURL: URL
-    var isAnimatedWebP: Bool { true }
+    let animatedURL: URL?
 }
 
 var gridConfiguration = ItemGridConfiguration.default
@@ -282,7 +282,7 @@ gridConfiguration.animatedWebPInterval = 1 // animate every eligible item
 | Symbol | Description |
 |---|---|
 | `CategoryDisplayable` | Protocol for category tab models (`categoryID`, `categoryTitle`). |
-| `ItemDisplayable` | Protocol for grid item models (`itemID`, `categoryID`, `imageURL`, optional `isAnimatedWebP`). |
+| `ItemDisplayable` | Protocol for grid item models (`itemID`, `categoryID`, `imageURL`, optional `animatedURL`). |
 | `CategoryItemPaginationProviding` | Protocol for paginated data access. |
 | `ItemOverlayConfiguration` | Factory + updater for a custom UIKit overlay on each item. Pass `stateVersion` to refresh visible overlays when external overlay state changes. |
 | `CategoryItemStyle` | Appearance for one category tab state (colors, font, corner radius, content insets). |

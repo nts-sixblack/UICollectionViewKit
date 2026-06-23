@@ -54,7 +54,12 @@ actor ImageLoader {
                 }
 
                 if let loadedImage {
-                    await cache.storeDownloadedFile(from: tempURL, loadedImage: loadedImage, for: itemID)
+                    await cache.storeDownloadedFile(
+                        from: tempURL,
+                        loadedImage: loadedImage,
+                        for: itemID,
+                        isAnimatedWebP: isAnimatedWebP
+                    )
                     return loadedImage
                 }
 
@@ -136,13 +141,8 @@ enum ImageLoadHandle {
         ImageLoadTaskStore.shared.store(task, for: token)
     }
 
-    static func cancel(token: UUID, itemID: String?) {
+    static func cancel(token: UUID) {
         ImageLoadTaskStore.shared.cancel(token: token)
-        if let itemID {
-            Task {
-                await ImageLoader.shared.cancel(itemID: itemID)
-            }
-        }
     }
 }
 

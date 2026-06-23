@@ -89,10 +89,7 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
             }
             cell.configure(
                 with: item.imageURL,
-                isAnimatedWebP: self.configuration.shouldPlayAnimatedWebP(
-                    itemSupportsAnimation: item.isAnimatedWebP,
-                    itemIndex: indexPath.item
-                ),
+                animatedURL: self.resolvedAnimatedURL(for: item, at: indexPath),
                 overlayConfiguration: self.itemOverlayConfiguration,
                 item: item,
                 appearance: self.configuration
@@ -231,10 +228,7 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
 
             cell.configure(
                 with: item.imageURL,
-                isAnimatedWebP: configuration.shouldPlayAnimatedWebP(
-                    itemSupportsAnimation: item.isAnimatedWebP,
-                    itemIndex: indexPath.item
-                ),
+                animatedURL: resolvedAnimatedURL(for: item, at: indexPath),
                 overlayConfiguration: itemOverlayConfiguration,
                 item: item,
                 appearance: configuration
@@ -252,10 +246,7 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
 
             cell.configure(
                 with: item.imageURL,
-                isAnimatedWebP: configuration.shouldPlayAnimatedWebP(
-                    itemSupportsAnimation: item.isAnimatedWebP,
-                    itemIndex: indexPath.item
-                ),
+                animatedURL: resolvedAnimatedURL(for: item, at: indexPath),
                 overlayConfiguration: itemOverlayConfiguration,
                 item: item,
                 appearance: configuration
@@ -267,6 +258,16 @@ final class ItemGridCollectionView<I: ItemDisplayable>: UIView, UICollectionView
         let items = dataSource.snapshot().itemIdentifiers
         guard items.indices.contains(index) else { return }
         onItemSelected?(items[index])
+    }
+
+    private func resolvedAnimatedURL(for item: I, at indexPath: IndexPath) -> URL? {
+        guard configuration.shouldPlayAnimatedWebP(
+            itemSupportsAnimation: item.animatedURL != nil,
+            itemIndex: indexPath.item
+        ) else {
+            return nil
+        }
+        return item.animatedURL
     }
 
     func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {

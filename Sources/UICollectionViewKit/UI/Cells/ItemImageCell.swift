@@ -3,9 +3,11 @@ import UIKit
 final class ItemImageCell: UICollectionViewCell {
     static let reuseIdentifier = "ItemImageCell"
 
-    private(set) var loadToken = UUID()
+    private var staticLoadToken = UUID()
+    private var animatedLoadToken = UUID()
     private var currentItemID: String?
-    private var currentIsAnimatedWebP = false
+    private var currentImageURL: URL?
+    private var currentAnimatedURL: URL?
     private var shouldAnimateWhenVisible = false
     private var hostedOverlayView: UIView?
     private var appearance = ItemGridConfiguration.default
@@ -67,9 +69,11 @@ final class ItemImageCell: UICollectionViewCell {
     override func prepareForReuse() {
         super.prepareForReuse()
         cancelCurrentLoad()
-        loadToken = UUID()
+        staticLoadToken = UUID()
+        animatedLoadToken = UUID()
         currentItemID = nil
-        currentIsAnimatedWebP = false
+        currentImageURL = nil
+        currentAnimatedURL = nil
         shouldAnimateWhenVisible = false
         stopAnimationPlayback()
         activityIndicator.stopAnimating()
@@ -83,13 +87,13 @@ final class ItemImageCell: UICollectionViewCell {
 
     func configure<I: ItemDisplayable>(
         with url: URL,
-        isAnimatedWebP: Bool,
+        animatedURL: URL?,
         overlayConfiguration: ItemOverlayConfiguration<I>?,
         item: I,
         appearance configuration: ItemGridConfiguration
     ) {
         applyAppearance(from: configuration)
-        configureImage(itemID: item.itemID, url: url, isAnimatedWebP: isAnimatedWebP)
+        configureImage(itemID: item.itemID, imageURL: url, animatedURL: animatedURL)
         configureOverlay(overlayConfiguration: overlayConfiguration, item: item)
     }
 
@@ -107,38 +111,69 @@ final class ItemImageCell: UICollectionViewCell {
         shouldAnimateWhenVisible && imageView.animationImages != nil
     }
 
-    private func configureImage(itemID: String, url: URL, isAnimatedWebP: Bool) {
+    private func configureImage(itemID: String, imageURL: URL, animatedURL: URL?) {
         if currentItemID == itemID,
-           currentIsAnimatedWebP == isAnimatedWebP,
+           currentImageURL == imageURL,
+           currentAnimatedURL == animatedURL,
            hasDisplayableContent {
             activityIndicator.stopAnimating()
             return
         }
 
         cancelCurrentLoad()
-        loadToken = UUID()
-        let token = loadToken
+        staticLoadToken = UUID()
+        animatedLoadToken = UUID()
+        let staticToken = staticLoadToken
+        let animatedToken = animatedLoadToken
         currentItemID = itemID
-        currentIsAnimatedWebP = isAnimatedWebP
+        currentImageURL = imageURL
+        currentAnimatedURL = animatedURL
 
-        if let cached = PersistentImageCache.shared.memoryLoadedImage(for: itemID),
-           let loadedImage = compatibleLoadedImage(cached, isAnimatedWebP: isAnimatedWebP) {
-            applyLoadedImage(loadedImage, animateIfVisible: true)
+        stopAnimationPlayback()
+
+        if let cachedStatic = PersistentImageCache.shared.memoryLoadedImage(for: itemID, isAnimatedWebP: false) {
+            applyLoadedImage(cachedStatic, animateIfVisible: false)
+            activityIndicator.stopAnimating()
+        } else {
+            imageView.image = nil
+        }
+
+        if let animatedURL,
+           let cachedAnimated = PersistentImageCache.shared.memoryLoadedImage(for: itemID, isAnimatedWebP: true) {
+            applyLoadedImage(cachedAnimated, animateIfVisible: true)
             activityIndicator.stopAnimating()
             return
         }
 
-        stopAnimationPlayback()
-        imageView.image = nil
-        activityIndicator.startAnimating()
+        if !hasDisplayableContent {
+            activityIndicator.startAnimating()
+        }
 
         ImageLoadHandle.load(
             itemID: itemID,
-            url: url,
-            isAnimatedWebP: isAnimatedWebP,
-            token: token
+            url: imageURL,
+            isAnimatedWebP: false,
+            token: staticToken
         ) { [weak self] receivedToken, loadedImage in
-            guard let self, receivedToken == self.loadToken else { return }
+            guard let self, receivedToken == self.staticLoadToken else { return }
+            guard let loadedImage else { return }
+            if !self.hasActiveAnimatedPlayback {
+                self.applyLoadedImage(loadedImage, animateIfVisible: false)
+            }
+            if self.hasDisplayableContent {
+                self.activityIndicator.stopAnimating()
+            }
+        }
+
+        guard let animatedURL else { return }
+
+        ImageLoadHandle.load(
+            itemID: itemID,
+            url: animatedURL,
+            isAnimatedWebP: true,
+            token: animatedToken
+        ) { [weak self] receivedToken, loadedImage in
+            guard let self, receivedToken == self.animatedLoadToken else { return }
             self.activityIndicator.stopAnimating()
             guard let loadedImage else { return }
             self.applyLoadedImage(loadedImage, animateIfVisible: true)
@@ -147,17 +182,6 @@ final class ItemImageCell: UICollectionViewCell {
 
     private var hasDisplayableContent: Bool {
         imageView.image != nil || imageView.animationImages != nil
-    }
-
-    private func compatibleLoadedImage(_ cached: LoadedImage, isAnimatedWebP: Bool) -> LoadedImage? {
-        switch (cached, isAnimatedWebP) {
-        case (.static, false), (.animated, true):
-            return cached
-        case let (.animated(sequence), false):
-            return .static(sequence.posterFrame)
-        case (.static, true):
-            return nil
-        }
     }
 
     private func applyLoadedImage(_ loadedImage: LoadedImage, animateIfVisible: Bool) {
@@ -213,6 +237,7 @@ final class ItemImageCell: UICollectionViewCell {
     }
 
     private func cancelCurrentLoad() {
-        ImageLoadHandle.cancel(token: loadToken, itemID: currentItemID)
+        ImageLoadHandle.cancel(token: staticLoadToken)
+        ImageLoadHandle.cancel(token: animatedLoadToken)
     }
 }

@@ -6,9 +6,9 @@ A UIKit collection view kit for SwiftUI with category tabs, bidirectional pagina
 
 UICollectionViewKit wraps a UIKit-based category + grid experience in a single SwiftUI view. You provide your own models and pagination logic through three protocols, and the library handles scroll state, diffable data sources, and image loading.
 
-Images are cached in memory and on disk by ``ItemDisplayable/itemID``, not by ``ItemDisplayable/imageURL``. Use a stable, globally unique `itemID` so signed or rotating image URLs reuse the same cached thumbnail.
+Images are cached in memory and on disk by ``ItemDisplayable/itemID`` plus image variant, not by ``ItemDisplayable/imageURL``. Use a stable, globally unique `itemID` so signed or rotating image URLs reuse the same cached files.
 
-Set ``ItemDisplayable/isAnimatedWebP`` to `true` on items whose URL is an animated WebP file. The library decodes downsampled frames, plays the animation in the grid cell, and pauses playback when the cell scrolls off screen. Defaults to `false` for static images.
+Set ``ItemDisplayable/animatedURL`` on items that have a separate animated WebP/GIF preview. The library shows ``ItemDisplayable/imageURL`` first as the static poster, decodes downsampled frames from the animated URL, plays the animation in the grid cell, and pauses playback when the cell scrolls off screen. Defaults to `nil` for static images.
 
 Use ``ItemGridConfiguration/animatedWebPInterval`` (default `4`) to limit animated playback to every Nth grid index (`0`, `4`, `8`, …). Set it to `1` to animate every eligible item.
 

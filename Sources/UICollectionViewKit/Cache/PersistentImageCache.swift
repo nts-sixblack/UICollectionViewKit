@@ -96,20 +96,20 @@ actor PersistentImageCache {
 
     nonisolated(unsafe) private let memoryCache = NSCache<NSString, LoadedImageBox>()
 
-    nonisolated func memoryLoadedImage(for itemID: String) -> LoadedImage? {
-        memoryCache.object(forKey: itemID as NSString)?.value
+    nonisolated func memoryLoadedImage(for itemID: String, isAnimatedWebP: Bool) -> LoadedImage? {
+        memoryCache.object(forKey: Self.cacheKey(for: itemID, isAnimatedWebP: isAnimatedWebP) as NSString)?.value
     }
 
     nonisolated func memoryImage(for itemID: String) -> UIImage? {
-        memoryLoadedImage(for: itemID)?.posterImage
+        memoryLoadedImage(for: itemID, isAnimatedWebP: false)?.posterImage
     }
 
     private let fileManager = FileManager.default
     private let cacheDirectory: URL
 
     init() {
-        memoryCache.totalCostLimit = 50 * 1024 * 1024
-        memoryCache.countLimit = 150
+        memoryCache.totalCostLimit = 100 * 1024 * 1024
+        memoryCache.countLimit = 250
 
         let caches = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         cacheDirectory = caches.appendingPathComponent("ImageCache", isDirectory: true)
@@ -117,14 +117,13 @@ actor PersistentImageCache {
     }
 
     func loadedImage(for itemID: String, isAnimatedWebP: Bool) -> LoadedImage? {
-        let key = itemID as NSString
+        let key = Self.cacheKey(for: itemID, isAnimatedWebP: isAnimatedWebP) as NSString
 
-        if let cached = memoryCache.object(forKey: key)?.value,
-           let compatible = compatibleLoadedImage(cached, isAnimatedWebP: isAnimatedWebP) {
-            return compatible
+        if let cached = memoryCache.object(forKey: key)?.value {
+            return cached
         }
 
-        let fileURL = diskURL(for: itemID)
+        let fileURL = diskURL(for: itemID, isAnimatedWebP: isAnimatedWebP)
         guard fileManager.fileExists(atPath: fileURL.path),
               let loadedImage = ImageDownsampler.loadedImage(fromFileAt: fileURL, isAnimatedWebP: isAnimatedWebP)
         else {
@@ -140,9 +139,9 @@ actor PersistentImageCache {
     }
 
     /// Moves a downloaded temp file into the disk cache and stores the decoded image in memory.
-    func storeDownloadedFile(from sourceURL: URL, loadedImage: LoadedImage, for itemID: String) {
-        let key = itemID as NSString
-        let fileURL = diskURL(for: itemID)
+    func storeDownloadedFile(from sourceURL: URL, loadedImage: LoadedImage, for itemID: String, isAnimatedWebP: Bool = false) {
+        let key = Self.cacheKey(for: itemID, isAnimatedWebP: isAnimatedWebP) as NSString
+        let fileURL = diskURL(for: itemID, isAnimatedWebP: isAnimatedWebP)
 
         if fileManager.fileExists(atPath: fileURL.path) {
             try? fileManager.removeItem(at: sourceURL)
@@ -151,17 +150,6 @@ actor PersistentImageCache {
         }
 
         cacheInMemory(loadedImage, forKey: key)
-    }
-
-    private func compatibleLoadedImage(_ cached: LoadedImage, isAnimatedWebP: Bool) -> LoadedImage? {
-        switch (cached, isAnimatedWebP) {
-        case (.static, false), (.animated, true):
-            return cached
-        case let (.animated(sequence), false):
-            return .static(sequence.posterFrame)
-        case (.static, true):
-            return nil
-        }
     }
 
     private func moveDownloadedFile(from sourceURL: URL, to destinationURL: URL) -> Bool {
@@ -203,8 +191,12 @@ actor PersistentImageCache {
         return cgImage.bytesPerRow * cgImage.height
     }
 
-    private func diskURL(for itemID: String) -> URL {
-        let hash = SHA256.hash(data: Data(itemID.utf8))
+    private static func cacheKey(for itemID: String, isAnimatedWebP: Bool) -> String {
+        "\(itemID)|\(isAnimatedWebP ? "a" : "s")"
+    }
+
+    private func diskURL(for itemID: String, isAnimatedWebP: Bool) -> URL {
+        let hash = SHA256.hash(data: Data(Self.cacheKey(for: itemID, isAnimatedWebP: isAnimatedWebP).utf8))
         let filename = hash.map { String(format: "%02x", $0) }.joined()
         return cacheDirectory.appendingPathComponent(filename)
     }
