@@ -20,7 +20,7 @@ public enum ItemAspectRatio: Sendable {
     }
 }
 
-public struct ItemGridConfiguration: Sendable {
+public struct ItemGridConfiguration: Sendable, Equatable {
     public var columnCountPhone: Int
     public var columnCountPad: Int
     public var interItemSpacing: CGFloat
@@ -63,6 +63,18 @@ public struct ItemGridConfiguration: Sendable {
 }
 
 extension ItemGridConfiguration {
+    public static func == (lhs: ItemGridConfiguration, rhs: ItemGridConfiguration) -> Bool {
+        lhs.columnCountPhone == rhs.columnCountPhone
+            && lhs.columnCountPad == rhs.columnCountPad
+            && lhs.interItemSpacing == rhs.interItemSpacing
+            && lhs.interGroupSpacing == rhs.interGroupSpacing
+            && lhs.contentInsets == rhs.contentInsets
+            && lhs.cornerRadius == rhs.cornerRadius
+            && lhs.imageBackgroundColor.isEqual(rhs.imageBackgroundColor)
+            && lhs.itemHeightMultiplier == rhs.itemHeightMultiplier
+            && lhs.animatedWebPInterval == rhs.animatedWebPInterval
+    }
+
     public static let `default` = ItemGridConfiguration(
         columnCountPhone: 3,
         columnCountPad: 5,

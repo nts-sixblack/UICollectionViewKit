@@ -1,6 +1,6 @@
 import UIKit
 
-public struct CategoryHeaderConfiguration: Sendable {
+public struct CategoryHeaderConfiguration: Sendable, Equatable {
     public var normalStyle: CategoryItemStyle
     public var selectedStyle: CategoryItemStyle
     public var itemSpacing: CGFloat

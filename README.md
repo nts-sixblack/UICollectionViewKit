@@ -5,7 +5,7 @@ A Swift Package that embeds a high-performance UIKit collection view inside Swif
 ## Features
 
 - **SwiftUI bridge** — Drop `CategoryItemCollectionView` into any SwiftUI view hierarchy.
-- **Category tabs** — Horizontal category picker with per-category scroll position restoration.
+- **Category tabs** — Horizontal category picker with self-sizing pill labels, per-category scroll position restoration, and layout refresh when embedded in SwiftUI.
 - **Customizable UI** — Configure category tab styles (normal/selected), spacing, grid layout (columns, insets, corner radius, aspect ratio), and container background colors.
 - **Bidirectional pagination** — Load more items when scrolling down; load previous pages when scrolling up.
 - **Image loading** — Memory + disk cache keyed by item ID with ImageIO downsampling, concurrent download limits, optional animated WebP playback, and configurable animation interval.
@@ -30,7 +30,7 @@ Or add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.9.0"),
+    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.9.1"),
 ],
 targets: [
     .target(

@@ -14,6 +14,8 @@ Use ``ItemGridConfiguration/animatedWebPInterval`` (default `4`) to limit animat
 
 Customize category tab appearance with ``CategoryHeaderConfiguration`` (normal vs selected pill styles, spacing, insets, header height) and the item grid with ``ItemGridConfiguration`` (column counts, spacing, content insets, corner radius, item aspect ratio, animated WebP interval). Use ``CategoryItemBackgroundConfiguration`` for container background colors. Omit all to keep the built-in defaults.
 
+Category tab cells self-size to their title text. Cache ``CategoryHeaderConfiguration`` (or other configuration values) instead of recreating them on every SwiftUI update so the header is not reloaded unnecessarily.
+
 ## Topics
 
 ### Essentials

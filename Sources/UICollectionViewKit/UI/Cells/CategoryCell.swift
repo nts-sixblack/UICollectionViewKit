@@ -7,6 +7,8 @@ final class CategoryCell: UICollectionViewCell {
         let label = UILabel()
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
+        label.setContentCompressionResistancePriority(.required, for: .horizontal)
+        label.setContentHuggingPriority(.required, for: .horizontal)
         return label
     }()
 
@@ -54,5 +56,29 @@ final class CategoryCell: UICollectionViewCell {
         bottomConstraint?.constant = -style.contentInsets.bottom
         leadingConstraint?.constant = style.contentInsets.leading
         trailingConstraint?.constant = -style.contentInsets.trailing
+
+        invalidateIntrinsicContentSize()
+        setNeedsLayout()
+    }
+
+    override func preferredLayoutAttributesFitting(
+        _ layoutAttributes: UICollectionViewLayoutAttributes
+    ) -> UICollectionViewLayoutAttributes {
+        guard let attributes = layoutAttributes.copy() as? UICollectionViewLayoutAttributes else {
+            return layoutAttributes
+        }
+
+        contentView.setNeedsLayout()
+        contentView.layoutIfNeeded()
+
+        let height = max(attributes.size.height, 1)
+        let fittedSize = contentView.systemLayoutSizeFitting(
+            CGSize(width: UIView.layoutFittingCompressedSize.width, height: height),
+            withHorizontalFittingPriority: .fittingSizeLevel,
+            verticalFittingPriority: .required
+        )
+
+        attributes.frame.size = CGSize(width: ceil(fittedSize.width), height: height)
+        return attributes
     }
 }

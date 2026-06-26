@@ -73,11 +73,21 @@ public struct CategoryItemCollectionView<
 
         viewController.update(categories: categories)
         viewController.updateLeadingCategorySlot(makeLeadingSlot(coordinator: context.coordinator))
-        viewController.updateAppearance(
-            headerConfiguration: headerConfiguration,
-            gridConfiguration: gridConfiguration,
-            backgroundConfiguration: backgroundConfiguration
-        )
+
+        let appearanceChanged = context.coordinator.lastHeaderConfiguration != headerConfiguration
+            || context.coordinator.lastGridConfiguration != gridConfiguration
+            || context.coordinator.lastBackgroundConfiguration != backgroundConfiguration
+
+        if appearanceChanged {
+            context.coordinator.lastHeaderConfiguration = headerConfiguration
+            context.coordinator.lastGridConfiguration = gridConfiguration
+            context.coordinator.lastBackgroundConfiguration = backgroundConfiguration
+            viewController.updateAppearance(
+                headerConfiguration: headerConfiguration,
+                gridConfiguration: gridConfiguration,
+                backgroundConfiguration: backgroundConfiguration
+            )
+        }
         viewController.updateCategoryInteraction(onCategorySelected: onCategorySelected)
         viewController.updateItemInteraction(
             overlayConfiguration: itemOverlayConfiguration,
@@ -105,6 +115,9 @@ public struct CategoryItemCollectionView<
     public final class Coordinator {
         weak var viewController: CategoryItemViewController<C, I, Provider>?
         var hostingController: UIHostingController<AnyView>?
+        var lastHeaderConfiguration: CategoryHeaderConfiguration?
+        var lastGridConfiguration: ItemGridConfiguration?
+        var lastBackgroundConfiguration: CategoryItemBackgroundConfiguration?
 
         func updateLeadingContent(_ content: some View) {
             hostingController?.rootView = AnyView(content)

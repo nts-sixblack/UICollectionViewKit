@@ -65,22 +65,20 @@ final class CategoryHeaderView<C: CategoryDisplayable>: UIView, UICollectionView
     }
 
     func applyConfiguration(_ configuration: CategoryHeaderConfiguration) {
-        let layoutChanged = self.configuration.itemSpacing != configuration.itemSpacing
-            || self.configuration.lineSpacing != configuration.lineSpacing
-            || self.configuration.sectionInsets != configuration.sectionInsets
+        guard self.configuration != configuration else { return }
 
         self.configuration = configuration
         applyLayout(from: configuration)
 
         guard !categories.isEmpty else { return }
 
-        if layoutChanged {
-            collectionView.collectionViewLayout.invalidateLayout()
-        }
+        collectionView.collectionViewLayout.invalidateLayout()
 
         var snapshot = dataSource.snapshot()
         snapshot.reloadSections([0])
-        dataSource.apply(snapshot, animatingDifferences: false)
+        dataSource.apply(snapshot, animatingDifferences: false) { [weak self] in
+            self?.collectionView.collectionViewLayout.invalidateLayout()
+        }
     }
 
     func apply(categories: [C], selectedCategoryID: String?) {
@@ -90,7 +88,13 @@ final class CategoryHeaderView<C: CategoryDisplayable>: UIView, UICollectionView
         var snapshot = Snapshot()
         snapshot.appendSections([0])
         snapshot.appendItems(categories, toSection: 0)
-        dataSource.apply(snapshot, animatingDifferences: false)
+        dataSource.apply(snapshot, animatingDifferences: false) { [weak self] in
+            self?.collectionView.collectionViewLayout.invalidateLayout()
+        }
+    }
+
+    func invalidateCategoryItemLayout() {
+        collectionView.collectionViewLayout.invalidateLayout()
     }
 
     func updateSelection(selectedCategoryID: String) {

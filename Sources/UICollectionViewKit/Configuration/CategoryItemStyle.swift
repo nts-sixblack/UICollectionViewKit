@@ -1,6 +1,6 @@
 import UIKit
 
-public struct CategoryItemStyle: Sendable {
+public struct CategoryItemStyle: Sendable, Equatable {
     public var backgroundColor: UIColor
     public var borderColor: UIColor
     public var textColor: UIColor
@@ -29,6 +29,16 @@ public struct CategoryItemStyle: Sendable {
 }
 
 extension CategoryItemStyle {
+    public static func == (lhs: CategoryItemStyle, rhs: CategoryItemStyle) -> Bool {
+        lhs.backgroundColor.isEqual(rhs.backgroundColor)
+            && lhs.borderColor.isEqual(rhs.borderColor)
+            && lhs.textColor.isEqual(rhs.textColor)
+            && lhs.font.isEqual(rhs.font)
+            && lhs.cornerRadius == rhs.cornerRadius
+            && lhs.borderWidth == rhs.borderWidth
+            && lhs.contentInsets == rhs.contentInsets
+    }
+
     public static let legacyNormal = CategoryItemStyle(
         backgroundColor: .secondarySystemBackground,
         borderColor: .separator,

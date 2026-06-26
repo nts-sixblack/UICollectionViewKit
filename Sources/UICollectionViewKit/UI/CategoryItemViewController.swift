@@ -38,6 +38,7 @@ public final class CategoryItemViewController<
     private var leadingContentView: UIView?
     private var selectedCategoryID: String?
     private var categoryStates: [String: CategoryState] = [:]
+    private var lastLaidOutHeaderWidth: CGFloat = 0
 
     public init(
         categories: [C],
@@ -76,6 +77,16 @@ public final class CategoryItemViewController<
         setupViews()
         setupCallbacks()
         reloadContent()
+    }
+
+    public override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+
+        let headerWidth = headerView.bounds.width
+        guard headerWidth > 0, abs(headerWidth - lastLaidOutHeaderWidth) > 0.5 else { return }
+
+        lastLaidOutHeaderWidth = headerWidth
+        headerView.invalidateCategoryItemLayout()
     }
 
     public func update(categories: [C]) {

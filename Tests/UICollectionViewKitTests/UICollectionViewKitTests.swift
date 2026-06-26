@@ -316,6 +316,20 @@ final class UICollectionViewKitTests: XCTestCase {
     }
 
     @MainActor
+    func testCategoryCellSelfSizesToFitShortTitle() {
+        let cell = CategoryCell(frame: CGRect(x: 0, y: 0, width: 10, height: 52))
+        cell.configure(title: "Football", style: .legacyNormal)
+
+        let attributes = UICollectionViewLayoutAttributes(forCellWith: IndexPath(item: 0, section: 0))
+        attributes.frame.size.height = 52
+
+        let fitted = cell.preferredLayoutAttributesFitting(attributes)
+
+        XCTAssertGreaterThan(fitted.frame.width, 60)
+        XCTAssertEqual(fitted.frame.height, 52, accuracy: 0.5)
+    }
+
+    @MainActor
     func testHeaderConfigurationUpdatesLayoutSpacing() {
         struct TestCategory: CategoryDisplayable, Hashable {
             let categoryID: String
