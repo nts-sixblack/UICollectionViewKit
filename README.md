@@ -30,7 +30,7 @@ Or add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.9.1"),
+    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.9.2"),
 ],
 targets: [
     .target(
@@ -256,6 +256,8 @@ When the user selects a different category, the current scroll offset is saved a
 ### Image caching
 
 Thumbnails are cached in memory and on disk by `itemID` plus image variant, not `imageURL`. Provide a stable, globally unique `itemID` on each `ItemDisplayable` model so signed or rotating image URLs reuse the same cached files.
+
+Static posters are kept in memory for fast scroll-back. Animated WebP/GIF files are cached on disk in full; only the poster frame is retained in memory so large frame buffers do not evict static thumbnails from other items in the same category.
 
 ### Animated WebP
 

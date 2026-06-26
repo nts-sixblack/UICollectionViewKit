@@ -117,20 +117,28 @@ actor PersistentImageCache {
     }
 
     func loadedImage(for itemID: String, isAnimatedWebP: Bool) -> LoadedImage? {
-        let key = Self.cacheKey(for: itemID, isAnimatedWebP: isAnimatedWebP) as NSString
+        if isAnimatedWebP {
+            // Full animated sequences are never kept in memory — decode on demand from disk
+            // so large frame buffers do not evict static posters from the shared NSCache.
+            let fileURL = diskURL(for: itemID, isAnimatedWebP: true)
+            guard fileManager.fileExists(atPath: fileURL.path) else { return nil }
+            return ImageDownsampler.loadedImage(fromFileAt: fileURL, isAnimatedWebP: true)
+        }
+
+        let key = Self.cacheKey(for: itemID, isAnimatedWebP: false) as NSString
 
         if let cached = memoryCache.object(forKey: key)?.value {
             return cached
         }
 
-        let fileURL = diskURL(for: itemID, isAnimatedWebP: isAnimatedWebP)
+        let fileURL = diskURL(for: itemID, isAnimatedWebP: false)
         guard fileManager.fileExists(atPath: fileURL.path),
-              let loadedImage = ImageDownsampler.loadedImage(fromFileAt: fileURL, isAnimatedWebP: isAnimatedWebP)
+              let loadedImage = ImageDownsampler.loadedImage(fromFileAt: fileURL, isAnimatedWebP: false)
         else {
             return nil
         }
 
-        cacheInMemory(loadedImage, forKey: key)
+        cacheInMemory(loadedImage, forKey: key, isAnimatedWebP: false)
         return loadedImage
     }
 
@@ -149,7 +157,7 @@ actor PersistentImageCache {
             try? fileManager.removeItem(at: sourceURL)
         }
 
-        cacheInMemory(loadedImage, forKey: key)
+        cacheInMemory(loadedImage, forKey: key, isAnimatedWebP: isAnimatedWebP)
     }
 
     private func moveDownloadedFile(from sourceURL: URL, to destinationURL: URL) -> Bool {
@@ -167,11 +175,18 @@ actor PersistentImageCache {
         }
     }
 
-    private func cacheInMemory(_ loadedImage: LoadedImage, forKey key: NSString) {
+    private func cacheInMemory(_ loadedImage: LoadedImage, forKey key: NSString, isAnimatedWebP: Bool) {
+        let memoryValue: LoadedImage
+        if isAnimatedWebP, case let .animated(sequence) = loadedImage {
+            memoryValue = .static(sequence.posterFrame)
+        } else {
+            memoryValue = loadedImage
+        }
+
         memoryCache.setObject(
-            LoadedImageBox(loadedImage),
+            LoadedImageBox(memoryValue),
             forKey: key,
-            cost: Self.estimatedMemoryCost(for: loadedImage)
+            cost: Self.estimatedMemoryCost(for: memoryValue)
         )
     }
 

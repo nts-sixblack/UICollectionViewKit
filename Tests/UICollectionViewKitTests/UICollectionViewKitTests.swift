@@ -563,13 +563,109 @@ final class UICollectionViewKitTests: XCTestCase {
             isAnimatedWebP: true
         )
 
-        XCTAssertNotNil(PersistentImageCache.shared.memoryLoadedImage(for: itemID, isAnimatedWebP: true))
-
-        let cached = await PersistentImageCache.shared.loadedImage(for: itemID, isAnimatedWebP: true)
-        guard case .animated = cached else {
-            XCTFail("Expected animated cache entry")
+        let memoryCached = PersistentImageCache.shared.memoryLoadedImage(for: itemID, isAnimatedWebP: true)
+        guard case .static = memoryCached else {
+            XCTFail("Expected animated memory cache to store poster only")
             return
         }
+
+        let diskCached = await PersistentImageCache.shared.loadedImage(for: itemID, isAnimatedWebP: true)
+        guard case .animated = diskCached else {
+            XCTFail("Expected full animated sequence from disk cache")
+            return
+        }
+    }
+
+    func testAnimatedMemoryCacheDoesNotEvictStaticPosters() async throws {
+        let staticItemIDs = (0..<30).map { "static-poster-\($0)-\(UUID().uuidString)" }
+        let animatedItemIDs = (0..<15).map { "animated-poster-\($0)-\(UUID().uuidString)" }
+
+        var staticURLs: [URL] = []
+        var animatedURLs: [URL] = []
+        defer {
+            staticURLs.forEach { try? FileManager.default.removeItem(at: $0) }
+            animatedURLs.forEach { try? FileManager.default.removeItem(at: $0) }
+        }
+
+        for itemID in staticItemIDs {
+            let sourceURL = try makeTestImageFile()
+            staticURLs.append(sourceURL)
+            guard let sourceImage = UIImage(contentsOfFile: sourceURL.path) else {
+                XCTFail("Expected test image at \(sourceURL.path)")
+                return
+            }
+            await PersistentImageCache.shared.storeDownloadedFile(
+                from: sourceURL,
+                loadedImage: .static(sourceImage),
+                for: itemID
+            )
+        }
+
+        for itemID in animatedItemIDs {
+            let sourceURL = try makeLargeAnimatedGIFFile(frameCount: 40, size: CGSize(width: 200, height: 200))
+            animatedURLs.append(sourceURL)
+            guard case let .animated(sequence)? = ImageDownsampler.loadedImage(fromFileAt: sourceURL, isAnimatedWebP: true) else {
+                XCTFail("Expected animated loaded image")
+                return
+            }
+            await PersistentImageCache.shared.storeDownloadedFile(
+                from: sourceURL,
+                loadedImage: .animated(sequence),
+                for: itemID,
+                isAnimatedWebP: true
+            )
+        }
+
+        for itemID in staticItemIDs {
+            XCTAssertNotNil(
+                PersistentImageCache.shared.memoryLoadedImage(for: itemID, isAnimatedWebP: false),
+                "Static poster \(itemID) should remain in memory after animated stores"
+            )
+        }
+    }
+
+    @MainActor
+    func testItemImageCellShowsStaticPosterWithoutSpinnerOnMemoryHit() async throws {
+        let itemID = "static-memory-hit-\(UUID().uuidString)"
+        let sourceURL = try makeTestImageFile()
+        defer { try? FileManager.default.removeItem(at: sourceURL) }
+
+        guard let sourceImage = UIImage(contentsOfFile: sourceURL.path) else {
+            XCTFail("Expected test image at \(sourceURL.path)")
+            return
+        }
+
+        await PersistentImageCache.shared.storeDownloadedFile(
+            from: sourceURL,
+            loadedImage: .static(sourceImage),
+            for: itemID
+        )
+
+        struct AnimatedTestItem: ItemDisplayable {
+            let itemID: String
+            let categoryID: String
+            let imageURL: URL
+            let animatedURL: URL?
+        }
+
+        let item = AnimatedTestItem(
+            itemID: itemID,
+            categoryID: "nature",
+            imageURL: sourceURL,
+            animatedURL: URL(string: "https://example.com/animated.webp")!
+        )
+
+        let cell = ItemImageCell(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        cell.configure(
+            with: sourceURL,
+            animatedURL: item.animatedURL,
+            overlayConfiguration: nil as ItemOverlayConfiguration<AnimatedTestItem>?,
+            item: item,
+            appearance: .default
+        )
+
+        XCTAssertTrue(cell.test_hasVisibleImage)
+        XCTAssertFalse(cell.test_isActivityIndicatorAnimating)
     }
 
     @MainActor
@@ -613,6 +709,9 @@ final class UICollectionViewKitTests: XCTestCase {
             appearance: .default
         )
 
+        for _ in 0..<100 where !cell.hasActiveAnimatedPlayback {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
         XCTAssertTrue(cell.hasActiveAnimatedPlayback)
 
         cell.prepareForReuse()
@@ -704,6 +803,39 @@ private func makeTestAnimatedGIFFile() throws -> URL {
 
     CGImageDestinationAddImage(destination, firstCGImage, frameProperties as CFDictionary)
     CGImageDestinationAddImage(destination, secondCGImage, frameProperties as CFDictionary)
+
+    guard CGImageDestinationFinalize(destination) else {
+        throw NSError(domain: "UICollectionViewKitTests", code: 3)
+    }
+
+    return url
+}
+
+private func makeLargeAnimatedGIFFile(frameCount: Int, size: CGSize) throws -> URL {
+    let url = FileManager.default.temporaryDirectory
+        .appendingPathComponent("\(UUID().uuidString).gif")
+
+    guard let destination = CGImageDestinationCreateWithURL(url as CFURL, "com.compuserve.gif" as CFString, frameCount, nil) else {
+        throw NSError(domain: "UICollectionViewKitTests", code: 1)
+    }
+
+    let frameProperties: [CFString: Any] = [
+        kCGImagePropertyGIFDictionary: [
+            kCGImagePropertyGIFDelayTime: 0.1
+        ]
+    ]
+
+    for index in 0..<frameCount {
+        let color = index.isMultiple(of: 2) ? UIColor.red : UIColor.blue
+        let frame = UIGraphicsImageRenderer(size: size).image { context in
+            color.setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+        }
+        guard let cgImage = frame.cgImage else {
+            throw NSError(domain: "UICollectionViewKitTests", code: 2)
+        }
+        CGImageDestinationAddImage(destination, cgImage, frameProperties as CFDictionary)
+    }
 
     guard CGImageDestinationFinalize(destination) else {
         throw NSError(domain: "UICollectionViewKitTests", code: 3)

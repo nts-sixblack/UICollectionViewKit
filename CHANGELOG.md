@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.2] - 2026-06-26
+
+### Fixed
+
+- Animated WebP/GIF memory cache no longer stores full decoded frame sequences in the shared `NSCache`, which previously evicted static posters across an entire category and caused loading spinners when scrolling back.
+- Animated variants now keep only the poster frame in memory; full sequences decode on demand from the on-disk cache.
+- `ItemImageCell` no longer short-circuits configuration when an animated poster is in memory, so static posters stay visible while animation loads and `animationImages` are copied per cell to avoid reuse glitches.
+
+### Tests
+
+- Added coverage for animated poster-only memory caching, static poster retention after animated stores, and immediate static display without a loading spinner on memory hit.
+
 ## [1.9.1] - 2026-06-26
 
 ### Fixed

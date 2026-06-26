@@ -134,15 +134,12 @@ final class ItemImageCell: UICollectionViewCell {
         if let cachedStatic = PersistentImageCache.shared.memoryLoadedImage(for: itemID, isAnimatedWebP: false) {
             applyLoadedImage(cachedStatic, animateIfVisible: false)
             activityIndicator.stopAnimating()
+        } else if let animatedURL,
+                  let cachedAnimatedPoster = PersistentImageCache.shared.memoryLoadedImage(for: itemID, isAnimatedWebP: true) {
+            applyLoadedImage(cachedAnimatedPoster, animateIfVisible: false)
+            activityIndicator.stopAnimating()
         } else {
             imageView.image = nil
-        }
-
-        if let animatedURL,
-           let cachedAnimated = PersistentImageCache.shared.memoryLoadedImage(for: itemID, isAnimatedWebP: true) {
-            applyLoadedImage(cachedAnimated, animateIfVisible: true)
-            activityIndicator.stopAnimating()
-            return
         }
 
         if !hasDisplayableContent {
@@ -191,7 +188,7 @@ final class ItemImageCell: UICollectionViewCell {
             imageView.image = image
         case let .animated(sequence):
             imageView.image = sequence.posterFrame
-            imageView.animationImages = sequence.frames
+            imageView.animationImages = Array(sequence.frames)
             imageView.animationDuration = sequence.duration
             imageView.animationRepeatCount = 0
             shouldAnimateWhenVisible = true
@@ -241,3 +238,15 @@ final class ItemImageCell: UICollectionViewCell {
         ImageLoadHandle.cancel(token: animatedLoadToken)
     }
 }
+
+#if DEBUG
+extension ItemImageCell {
+    var test_isActivityIndicatorAnimating: Bool {
+        activityIndicator.isAnimating
+    }
+
+    var test_hasVisibleImage: Bool {
+        imageView.image != nil
+    }
+}
+#endif
