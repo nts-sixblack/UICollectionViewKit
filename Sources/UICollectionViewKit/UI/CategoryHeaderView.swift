@@ -97,6 +97,16 @@ final class CategoryHeaderView<C: CategoryDisplayable>: UIView, UICollectionView
         collectionView.collectionViewLayout.invalidateLayout()
     }
 
+    func resolvedHeight(for configuration: CategoryHeaderConfiguration) -> CGFloat {
+        let measuredPillHeight = [configuration.normalStyle, configuration.selectedStyle]
+            .map { CategoryCell.measuredContentHeight(style: $0) }
+            .max() ?? 0
+        let minimumHeight = configuration.sectionInsets.top
+            + measuredPillHeight
+            + configuration.sectionInsets.bottom
+        return max(configuration.headerHeight, minimumHeight)
+    }
+
     func updateSelection(selectedCategoryID: String) {
         self.selectedCategoryID = selectedCategoryID
         var snapshot = dataSource.snapshot()

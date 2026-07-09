@@ -28,15 +28,10 @@ public struct CategoryHeaderConfiguration: Sendable, Equatable {
 extension CategoryHeaderConfiguration {
     /// Minimum header height that fits section insets plus the tallest category pill content.
     public var recommendedMinimumHeight: CGFloat {
-        let styles = [normalStyle, selectedStyle]
-        let maxContentInsets = styles
-            .map { $0.contentInsets.top + $0.contentInsets.bottom }
+        let maxPillHeight = [normalStyle, selectedStyle]
+            .map { CategoryHeaderMetrics.estimatedPillHeight(for: $0) }
             .max() ?? 0
-        let maxLineHeight = styles
-            .map { ceil($0.font.lineHeight) }
-            .max() ?? 0
-        let contentHeight = maxContentInsets + maxLineHeight
-        return sectionInsets.top + contentHeight + sectionInsets.bottom
+        return sectionInsets.top + maxPillHeight + sectionInsets.bottom
     }
 
     /// Resolved header height honoring the configured value and content requirements.
@@ -52,4 +47,30 @@ extension CategoryHeaderConfiguration {
         sectionInsets: NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16),
         headerHeight: 52
     )
+}
+
+enum CategoryHeaderMetrics {
+    static let sizingSampleText = "Agy"
+    static let layoutSafetyMargin: CGFloat = 2
+
+    static func estimatedPillHeight(for style: CategoryItemStyle) -> CGFloat {
+        style.contentInsets.top
+            + estimatedTextHeight(for: style.font)
+            + style.contentInsets.bottom
+            + layoutSafetyMargin
+    }
+
+    static func estimatedTextHeight(for font: UIFont) -> CGFloat {
+        let sample = sizingSampleText as NSString
+        let boundingHeight = ceil(
+            sample.boundingRect(
+                with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: [.font: font],
+                context: nil
+            ).height
+        )
+        let metricHeight = ceil(font.ascender - font.descender + font.leading)
+        return max(boundingHeight, metricHeight, ceil(font.lineHeight))
+    }
 }

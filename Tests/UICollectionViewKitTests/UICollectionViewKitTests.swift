@@ -287,9 +287,7 @@ final class UICollectionViewKitTests: XCTestCase {
         configuration.headerHeight = 52
 
         let expectedMinimum = 8
-            + 6
-            + ceil(configuration.selectedStyle.font.lineHeight)
-            + 6
+            + CategoryHeaderMetrics.estimatedPillHeight(for: configuration.selectedStyle)
             + 8
 
         XCTAssertEqual(configuration.recommendedMinimumHeight, expectedMinimum, accuracy: 0.5)
@@ -330,14 +328,55 @@ final class UICollectionViewKitTests: XCTestCase {
         )
         viewController.loadViewIfNeeded()
 
+        let resolvedHeight = viewController.test_headerView.resolvedHeight(for: headerConfiguration)
+        let measuredMinimum = headerConfiguration.sectionInsets.top
+            + CategoryCell.measuredContentHeight(style: headerConfiguration.selectedStyle)
+            + headerConfiguration.sectionInsets.bottom
         XCTAssertEqual(
             viewController.test_headerHeightConstraint?.constant,
-            headerConfiguration.effectiveHeaderHeight
+            resolvedHeight
         )
         XCTAssertGreaterThanOrEqual(
             viewController.test_headerHeightConstraint?.constant ?? 0,
-            headerConfiguration.recommendedMinimumHeight
+            measuredMinimum
         )
+    }
+
+    @MainActor
+    func testResolvedHeaderHeightUsesMeasuredCategoryCellHeight() {
+        struct TestCategory: CategoryDisplayable, Hashable {
+            let categoryID: String
+            let categoryTitle: String
+        }
+
+        var configuration = CategoryHeaderConfiguration.default
+        configuration.sectionInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
+        configuration.normalStyle = CategoryItemStyle(
+            backgroundColor: .white,
+            borderColor: .clear,
+            textColor: .black,
+            font: .systemFont(ofSize: 16, weight: .regular),
+            cornerRadius: 16,
+            borderWidth: 0,
+            contentInsets: NSDirectionalEdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12)
+        )
+        configuration.selectedStyle = CategoryItemStyle(
+            backgroundColor: .systemPink,
+            borderColor: .clear,
+            textColor: .white,
+            font: .systemFont(ofSize: 16, weight: .semibold),
+            cornerRadius: 16,
+            borderWidth: 0,
+            contentInsets: NSDirectionalEdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12)
+        )
+        configuration.headerHeight = 40
+
+        let headerView = CategoryHeaderView<TestCategory>(frame: CGRect(x: 0, y: 0, width: 320, height: 52))
+        let resolvedHeight = headerView.resolvedHeight(for: configuration)
+        let measuredPillHeight = CategoryCell.measuredContentHeight(style: configuration.selectedStyle)
+
+        XCTAssertGreaterThanOrEqual(resolvedHeight, 8 + measuredPillHeight + 8)
+        XCTAssertGreaterThan(resolvedHeight, configuration.headerHeight)
     }
 
     @MainActor

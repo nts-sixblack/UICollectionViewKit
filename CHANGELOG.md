@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.4] - 2026-07-09
+
+### Fixed
+
+- Category header pills no longer clip at the bottom when custom fonts (for example Poppins) render taller than `UIFont.lineHeight`. Header height now resolves from a measured `CategoryCell` layout at runtime, with improved pre-layout estimates based on font bounding metrics.
+
+### Tests
+
+- Added coverage for measured header height resolution via `CategoryHeaderView.resolvedHeight(for:)`.
+
 ## [1.9.3] - 2026-07-09
 
 ### Fixed

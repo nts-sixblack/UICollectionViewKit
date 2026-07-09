@@ -85,6 +85,7 @@ public final class CategoryItemViewController<
     public override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         updateHeaderTopInset()
+        updateHeaderHeightIfNeeded()
 
         let headerWidth = headerView.bounds.width
         guard headerWidth > 0, abs(headerWidth - lastLaidOutHeaderWidth) > 0.5 else { return }
@@ -198,7 +199,7 @@ public final class CategoryItemViewController<
         self.backgroundConfiguration = backgroundConfiguration
 
         view.backgroundColor = backgroundConfiguration.viewBackgroundColor
-        headerHeightConstraint?.constant = headerConfiguration.effectiveHeaderHeight
+        headerHeightConstraint?.constant = resolvedHeaderHeight()
         headerView.applyConfiguration(headerConfiguration)
         headerView.applyBackgroundColor(backgroundConfiguration.headerBackgroundColor)
         gridView.applyConfiguration(gridConfiguration)
@@ -237,7 +238,7 @@ public final class CategoryItemViewController<
         view.addSubview(customContentContainer)
 
         let headerHeightConstraint = headerView.heightAnchor.constraint(
-            equalToConstant: headerConfiguration.effectiveHeaderHeight
+            equalToConstant: resolvedHeaderHeight()
         )
         self.headerHeightConstraint = headerHeightConstraint
 
@@ -477,8 +478,18 @@ public final class CategoryItemViewController<
         return view.safeAreaInsets.top
     }
 
+    private func resolvedHeaderHeight() -> CGFloat {
+        headerView.resolvedHeight(for: headerConfiguration)
+    }
+
     private func updateHeaderTopInset() {
         headerTopConstraint?.constant = resolvedHeaderTopInset()
+    }
+
+    private func updateHeaderHeightIfNeeded() {
+        let resolvedHeight = resolvedHeaderHeight()
+        guard abs((headerHeightConstraint?.constant ?? 0) - resolvedHeight) > 0.5 else { return }
+        headerHeightConstraint?.constant = resolvedHeight
     }
 }
 

@@ -30,7 +30,7 @@ Or add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.9.3"),
+    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.9.4"),
 ],
 targets: [
     .target(
