@@ -71,7 +71,18 @@ final class CategoryCell: UICollectionViewCell {
         contentView.setNeedsLayout()
         contentView.layoutIfNeeded()
 
-        let height = max(attributes.size.height, 1)
+        let proposedHeight = max(attributes.size.height, 1)
+        let intrinsicHeight = ceil(
+            contentView.systemLayoutSizeFitting(
+                CGSize(
+                    width: UIView.layoutFittingCompressedSize.width,
+                    height: UIView.layoutFittingExpandedSize.height
+                ),
+                withHorizontalFittingPriority: .fittingSizeLevel,
+                verticalFittingPriority: .fittingSizeLevel
+            ).height
+        )
+        let height = max(proposedHeight, intrinsicHeight)
         let fittedSize = contentView.systemLayoutSizeFitting(
             CGSize(width: UIView.layoutFittingCompressedSize.width, height: height),
             withHorizontalFittingPriority: .fittingSizeLevel,

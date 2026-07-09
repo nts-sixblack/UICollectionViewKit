@@ -5,7 +5,7 @@ A Swift Package that embeds a high-performance UIKit collection view inside Swif
 ## Features
 
 - **SwiftUI bridge** — Drop `CategoryItemCollectionView` into any SwiftUI view hierarchy.
-- **Category tabs** — Horizontal category picker with self-sizing pill labels, per-category scroll position restoration, and layout refresh when embedded in SwiftUI.
+- **Category tabs** — Horizontal category picker with self-sizing pill labels, automatic header height resolution, safe-area-aware placement in SwiftUI, per-category scroll position restoration, and layout refresh when embedded in SwiftUI.
 - **Customizable UI** — Configure category tab styles (normal/selected), spacing, grid layout (columns, insets, corner radius, aspect ratio), and container background colors.
 - **Bidirectional pagination** — Load more items when scrolling down; load previous pages when scrolling up.
 - **Image loading** — Memory + disk cache keyed by item ID with ImageIO downsampling, concurrent download limits, optional animated WebP playback, and configurable animation interval.
@@ -30,7 +30,7 @@ Or add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.9.2"),
+    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.9.3"),
 ],
 targets: [
     .target(
@@ -213,6 +213,8 @@ gridConfiguration.applyAspectRatio(.portrait4x3)
 
 Omit `headerConfiguration`, `gridConfiguration`, and `backgroundConfiguration` to keep the built-in defaults.
 
+When you add non-zero `sectionInsets` or larger pill `contentInsets`, you do not need to manually recalculate `headerHeight`. The library resolves the final height with `CategoryHeaderConfiguration.effectiveHeaderHeight`, which is `max(headerHeight, recommendedMinimumHeight)`.
+
 ### 6. Optional: leading category with custom content
 
 Add a leading category tab that shows custom SwiftUI or UIKit content instead of the paginated grid:
@@ -288,12 +290,12 @@ gridConfiguration.animatedWebPInterval = 1 // animate every eligible item
 | `CategoryItemPaginationProviding` | Protocol for paginated data access. |
 | `ItemOverlayConfiguration` | Factory + updater for a custom UIKit overlay on each item. Pass `stateVersion` to refresh visible overlays when external overlay state changes. |
 | `CategoryItemStyle` | Appearance for one category tab state (colors, font, corner radius, content insets). |
-| `CategoryHeaderConfiguration` | Category tab bar styling: normal/selected styles, spacing, section insets, header height. |
+| `CategoryHeaderConfiguration` | Category tab bar styling: normal/selected styles, spacing, section insets, header height, plus `recommendedMinimumHeight` / `effectiveHeaderHeight` for automatic vertical sizing. |
 | `ItemGridConfiguration` | Grid layout and cell appearance: column counts, spacing, content insets, corner radius, item aspect ratio, animated WebP interval. |
 | `ItemAspectRatio` | Presets for global item height relative to width (`square`, `portrait4x3`, `landscape16x9`, `custom`). |
 | `CategoryItemBackgroundConfiguration` | Container background colors for the view controller, header bar, and grid canvas. |
 | `CategoryLeadingSlot` | UIKit hook for a leading category tab with custom content instead of the grid. |
-| `CategoryItemCollectionView` | SwiftUI `UIViewControllerRepresentable` entry point. |
+| `CategoryItemCollectionView` | SwiftUI entry point. Reads safe-area insets and embeds the UIKit host view controller. |
 | `CategoryItemViewController` | UIKit host with optional `onItemSelected`, overlay support, and `updateAppearance`. |
 
 ## Example

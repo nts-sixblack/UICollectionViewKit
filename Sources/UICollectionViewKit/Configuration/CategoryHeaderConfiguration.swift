@@ -26,6 +26,24 @@ public struct CategoryHeaderConfiguration: Sendable, Equatable {
 }
 
 extension CategoryHeaderConfiguration {
+    /// Minimum header height that fits section insets plus the tallest category pill content.
+    public var recommendedMinimumHeight: CGFloat {
+        let styles = [normalStyle, selectedStyle]
+        let maxContentInsets = styles
+            .map { $0.contentInsets.top + $0.contentInsets.bottom }
+            .max() ?? 0
+        let maxLineHeight = styles
+            .map { ceil($0.font.lineHeight) }
+            .max() ?? 0
+        let contentHeight = maxContentInsets + maxLineHeight
+        return sectionInsets.top + contentHeight + sectionInsets.bottom
+    }
+
+    /// Resolved header height honoring the configured value and content requirements.
+    public var effectiveHeaderHeight: CGFloat {
+        max(headerHeight, recommendedMinimumHeight)
+    }
+
     public static let `default` = CategoryHeaderConfiguration(
         normalStyle: .legacyNormal,
         selectedStyle: .legacySelected,

@@ -263,6 +263,108 @@ final class UICollectionViewKitTests: XCTestCase {
         XCTAssertEqual(configuration.selectedStyle.contentInsets.top, 8)
     }
 
+    func testRecommendedMinimumHeightIncludesSectionAndContentInsets() {
+        var configuration = CategoryHeaderConfiguration.default
+        configuration.sectionInsets = NSDirectionalEdgeInsets(top: 8, leading: 24, bottom: 8, trailing: 24)
+        configuration.normalStyle = CategoryItemStyle(
+            backgroundColor: .white,
+            borderColor: .clear,
+            textColor: .black,
+            font: .systemFont(ofSize: 16, weight: .regular),
+            cornerRadius: 16,
+            borderWidth: 0,
+            contentInsets: NSDirectionalEdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12)
+        )
+        configuration.selectedStyle = CategoryItemStyle(
+            backgroundColor: .systemPink,
+            borderColor: .clear,
+            textColor: .white,
+            font: .systemFont(ofSize: 16, weight: .semibold),
+            cornerRadius: 16,
+            borderWidth: 0,
+            contentInsets: NSDirectionalEdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12)
+        )
+        configuration.headerHeight = 52
+
+        let expectedMinimum = 8
+            + 6
+            + ceil(configuration.selectedStyle.font.lineHeight)
+            + 6
+            + 8
+
+        XCTAssertEqual(configuration.recommendedMinimumHeight, expectedMinimum, accuracy: 0.5)
+        XCTAssertGreaterThanOrEqual(configuration.effectiveHeaderHeight, configuration.recommendedMinimumHeight)
+    }
+
+    func testEffectiveHeaderHeightUsesRecommendedMinimumWhenConfiguredHeightIsTooSmall() {
+        var configuration = CategoryHeaderConfiguration.default
+        configuration.sectionInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
+        configuration.headerHeight = 40
+
+        XCTAssertEqual(configuration.effectiveHeaderHeight, configuration.recommendedMinimumHeight)
+    }
+
+    @MainActor
+    func testViewControllerUsesEffectiveHeaderHeight() {
+        struct TestCategory: CategoryDisplayable, Hashable {
+            let categoryID: String
+            let categoryTitle: String
+        }
+
+        struct TestProvider: CategoryItemPaginationProviding {
+            typealias I = TestGridItem
+
+            func totalCount(for categoryID: String) -> Int { 0 }
+            func items(for categoryID: String, offset: Int, limit: Int) -> [TestGridItem] { [] }
+        }
+
+        var headerConfiguration = CategoryHeaderConfiguration.default
+        headerConfiguration.sectionInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
+        headerConfiguration.headerHeight = 40
+
+        let viewController = CategoryItemViewController<TestCategory, TestGridItem, TestProvider>(
+            categories: [TestCategory(categoryID: "nature", categoryTitle: "Nature")],
+            itemProvider: TestProvider(),
+            pageSize: 10,
+            headerConfiguration: headerConfiguration
+        )
+        viewController.loadViewIfNeeded()
+
+        XCTAssertEqual(
+            viewController.test_headerHeightConstraint?.constant,
+            headerConfiguration.effectiveHeaderHeight
+        )
+        XCTAssertGreaterThanOrEqual(
+            viewController.test_headerHeightConstraint?.constant ?? 0,
+            headerConfiguration.recommendedMinimumHeight
+        )
+    }
+
+    @MainActor
+    func testViewControllerAppliesSwiftUITopSafeAreaInset() {
+        struct TestCategory: CategoryDisplayable, Hashable {
+            let categoryID: String
+            let categoryTitle: String
+        }
+
+        struct TestProvider: CategoryItemPaginationProviding {
+            typealias I = TestGridItem
+
+            func totalCount(for categoryID: String) -> Int { 0 }
+            func items(for categoryID: String, offset: Int, limit: Int) -> [TestGridItem] { [] }
+        }
+
+        let viewController = CategoryItemViewController<TestCategory, TestGridItem, TestProvider>(
+            categories: [TestCategory(categoryID: "nature", categoryTitle: "Nature")],
+            itemProvider: TestProvider(),
+            pageSize: 10
+        )
+        viewController.loadViewIfNeeded()
+        viewController.setHeaderTopInset(59)
+
+        XCTAssertEqual(viewController.test_headerTopConstraint?.constant, 59)
+    }
+
     @MainActor
     func testGridLayoutMetricsUseConfiguration() {
         var configuration = ItemGridConfiguration.default
@@ -327,6 +429,22 @@ final class UICollectionViewKitTests: XCTestCase {
 
         XCTAssertGreaterThan(fitted.frame.width, 60)
         XCTAssertEqual(fitted.frame.height, 52, accuracy: 0.5)
+    }
+
+    @MainActor
+    func testCategoryCellUsesIntrinsicHeightWhenProposedHeightIsTooSmall() {
+        let cell = CategoryCell(frame: CGRect(x: 0, y: 0, width: 10, height: 20))
+        cell.configure(title: "Football", style: .legacyNormal)
+
+        let attributes = UICollectionViewLayoutAttributes(forCellWith: IndexPath(item: 0, section: 0))
+        attributes.frame.size.height = 20
+
+        let fitted = cell.preferredLayoutAttributesFitting(attributes)
+        let expectedMinimumHeight = 8
+            + ceil(CategoryItemStyle.legacyNormal.font.lineHeight)
+            + 8
+
+        XCTAssertGreaterThanOrEqual(fitted.frame.height, expectedMinimumHeight - 0.5)
     }
 
     @MainActor

@@ -14,7 +14,11 @@ Use ``ItemGridConfiguration/animatedWebPInterval`` (default `4`) to limit animat
 
 Customize category tab appearance with ``CategoryHeaderConfiguration`` (normal vs selected pill styles, spacing, insets, header height) and the item grid with ``ItemGridConfiguration`` (column counts, spacing, content insets, corner radius, item aspect ratio, animated WebP interval). Use ``CategoryItemBackgroundConfiguration`` for container background colors. Omit all to keep the built-in defaults.
 
-Category tab cells self-size to their title text. Cache ``CategoryHeaderConfiguration`` (or other configuration values) instead of recreating them on every SwiftUI update so the header is not reloaded unnecessarily.
+``CategoryHeaderConfiguration`` exposes ``CategoryHeaderConfiguration/recommendedMinimumHeight`` and ``CategoryHeaderConfiguration/effectiveHeaderHeight``. The view controller uses the resolved height automatically, so non-zero ``CategoryHeaderConfiguration/sectionInsets`` and larger pill content insets do not clip the category tabs when `headerHeight` is configured too small.
+
+Category tab cells self-size to their title text horizontally and preserve their intrinsic content height vertically. ``CategoryItemCollectionView`` reads SwiftUI safe-area insets so the header starts below transparent navigation toolbars.
+
+Cache ``CategoryHeaderConfiguration`` (or other configuration values) instead of recreating them on every SwiftUI update so the header is not reloaded unnecessarily.
 
 ## Topics
 
@@ -54,6 +58,8 @@ For UIKit-only integration, call ``CategoryItemViewController/reloadVisibleItemO
 ### UI Configuration
 
 Use ``CategoryHeaderConfiguration`` to customize category tab appearance (normal vs selected styles, spacing, insets, header height), ``ItemGridConfiguration`` for grid columns, spacing, insets, cell corner radius, item aspect ratio, and animated WebP interval, and ``CategoryItemBackgroundConfiguration`` for container background colors. All default to the built-in styling when omitted.
+
+If your header uses vertical `sectionInsets` or larger pill `contentInsets`, prefer relying on ``CategoryHeaderConfiguration/effectiveHeaderHeight`` instead of manually tuning `headerHeight`.
 
 ```swift
 var gridConfiguration = ItemGridConfiguration(

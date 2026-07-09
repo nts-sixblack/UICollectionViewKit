@@ -6,7 +6,7 @@ public struct CategoryItemCollectionView<
     I: ItemDisplayable,
     Provider: CategoryItemPaginationProviding,
     LeadingContent: View
->: UIViewControllerRepresentable where Provider.I == I {
+>: View where Provider.I == I {
     let categories: [C]
     let itemProvider: Provider
     let pageSize: Int
@@ -45,11 +45,50 @@ public struct CategoryItemCollectionView<
         self.onItemSelected = onItemSelected
     }
 
-    public func makeCoordinator() -> Coordinator {
+    public var body: some View {
+        GeometryReader { geometry in
+            CategoryItemCollectionViewRepresentable(
+                categories: categories,
+                itemProvider: itemProvider,
+                pageSize: pageSize,
+                leadingCategory: leadingCategory,
+                leadingCategoryContent: leadingCategoryContent,
+                headerConfiguration: headerConfiguration,
+                gridConfiguration: gridConfiguration,
+                backgroundConfiguration: backgroundConfiguration,
+                itemOverlayConfiguration: itemOverlayConfiguration,
+                onCategorySelected: onCategorySelected,
+                onItemSelected: onItemSelected,
+                topSafeAreaInset: geometry.safeAreaInsets.top
+            )
+        }
+    }
+}
+
+private struct CategoryItemCollectionViewRepresentable<
+    C: CategoryDisplayable,
+    I: ItemDisplayable,
+    Provider: CategoryItemPaginationProviding,
+    LeadingContent: View
+>: UIViewControllerRepresentable where Provider.I == I {
+    let categories: [C]
+    let itemProvider: Provider
+    let pageSize: Int
+    let leadingCategory: C?
+    let leadingCategoryContent: LeadingContent
+    let headerConfiguration: CategoryHeaderConfiguration
+    let gridConfiguration: ItemGridConfiguration
+    let backgroundConfiguration: CategoryItemBackgroundConfiguration
+    let itemOverlayConfiguration: ItemOverlayConfiguration<I>?
+    let onCategorySelected: ((C) -> Void)?
+    let onItemSelected: ((I) -> Void)?
+    let topSafeAreaInset: CGFloat
+
+    func makeCoordinator() -> Coordinator {
         Coordinator()
     }
 
-    public func makeUIViewController(context: Context) -> CategoryItemViewController<C, I, Provider> {
+    func makeUIViewController(context: Context) -> CategoryItemViewController<C, I, Provider> {
         let leadingSlot = makeLeadingSlot(coordinator: context.coordinator)
         let viewController = CategoryItemViewController(
             categories: categories,
@@ -63,14 +102,16 @@ public struct CategoryItemCollectionView<
             onCategorySelected: onCategorySelected,
             onItemSelected: onItemSelected
         )
+        viewController.setHeaderTopInset(topSafeAreaInset)
         context.coordinator.viewController = viewController
         return viewController
     }
 
-    public func updateUIViewController(_ viewController: CategoryItemViewController<C, I, Provider>, context: Context) {
+    func updateUIViewController(_ viewController: CategoryItemViewController<C, I, Provider>, context: Context) {
         context.coordinator.viewController = viewController
         context.coordinator.updateLeadingContent(leadingCategoryContent)
 
+        viewController.setHeaderTopInset(topSafeAreaInset)
         viewController.update(categories: categories)
         viewController.updateLeadingCategorySlot(makeLeadingSlot(coordinator: context.coordinator))
 
@@ -112,7 +153,7 @@ public struct CategoryItemCollectionView<
         }
     }
 
-    public final class Coordinator {
+    final class Coordinator {
         weak var viewController: CategoryItemViewController<C, I, Provider>?
         var hostingController: UIHostingController<AnyView>?
         var lastHeaderConfiguration: CategoryHeaderConfiguration?
