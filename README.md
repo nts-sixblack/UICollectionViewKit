@@ -5,7 +5,7 @@ A Swift Package that embeds a high-performance UIKit collection view inside Swif
 ## Features
 
 - **SwiftUI bridge** — Drop `CategoryItemCollectionView` into any SwiftUI view hierarchy.
-- **Category tabs** — Horizontal category picker with self-sizing pill labels, automatic header height resolution, safe-area-aware placement in SwiftUI, per-category scroll position restoration, and layout refresh when embedded in SwiftUI.
+- **Category tabs** — Horizontal category picker with self-sizing pill labels, automatic header height resolution, per-category scroll position restoration, and layout refresh when embedded in SwiftUI.
 - **Customizable UI** — Configure category tab styles (normal/selected), spacing, grid layout (columns, insets, corner radius, aspect ratio), and container background colors.
 - **Bidirectional pagination** — Load more items when scrolling down; load previous pages when scrolling up.
 - **Image loading** — Memory + disk cache keyed by item ID with ImageIO downsampling, concurrent download limits, optional animated WebP playback, and configurable animation interval.
@@ -30,7 +30,7 @@ Or add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.9.4"),
+    .package(url: "https://github.com/nts-sixblack/UICollectionViewKit.git", from: "1.9.5"),
 ],
 targets: [
     .target(
@@ -215,6 +215,8 @@ Omit `headerConfiguration`, `gridConfiguration`, and `backgroundConfiguration` t
 
 When you add non-zero `sectionInsets` or larger pill `contentInsets`, you do not need to manually recalculate `headerHeight`. The library resolves the final height with `CategoryHeaderConfiguration.effectiveHeaderHeight`, which is `max(headerHeight, recommendedMinimumHeight)`.
 
+When embedded in SwiftUI (for example inside a `TabView` with a navigation toolbar), the category header starts at the top of the area allocated to `CategoryItemCollectionView`. Add any top spacing from your host layout if needed; the library does not apply an extra safe-area offset.
+
 ### 6. Optional: leading category with custom content
 
 Add a leading category tab that shows custom SwiftUI or UIKit content instead of the paginated grid:
@@ -295,7 +297,7 @@ gridConfiguration.animatedWebPInterval = 1 // animate every eligible item
 | `ItemAspectRatio` | Presets for global item height relative to width (`square`, `portrait4x3`, `landscape16x9`, `custom`). |
 | `CategoryItemBackgroundConfiguration` | Container background colors for the view controller, header bar, and grid canvas. |
 | `CategoryLeadingSlot` | UIKit hook for a leading category tab with custom content instead of the grid. |
-| `CategoryItemCollectionView` | SwiftUI entry point. Reads safe-area insets and embeds the UIKit host view controller. |
+| `CategoryItemCollectionView` | SwiftUI entry point that embeds the UIKit host view controller. |
 | `CategoryItemViewController` | UIKit host with optional `onItemSelected`, overlay support, and `updateAppearance`. |
 
 ## Example

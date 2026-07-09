@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.5] - 2026-07-09
+
+### Fixed
+
+- Category header pills no longer clip at the top when `headerHeight` is close to but smaller than the measured pill height plus `sectionInsets`. The header flow layout now assigns explicit item heights from measured `CategoryCell` layout, and resolved header height includes a safety margin.
+- Removed SwiftUI safe-area top compensation from `CategoryItemCollectionView`. The header now pins to the top of its host view so SwiftUI layout (for example `TabView` with a navigation toolbar) is not offset twice.
+
+### Tests
+
+- Added coverage for flow-layout item height fitting within resolved header bounds and header placement at the view top.
+
 ## [1.9.4] - 2026-07-09
 
 ### Fixed

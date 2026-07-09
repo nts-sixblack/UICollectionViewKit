@@ -16,7 +16,7 @@ Customize category tab appearance with ``CategoryHeaderConfiguration`` (normal v
 
 ``CategoryHeaderConfiguration`` exposes ``CategoryHeaderConfiguration/recommendedMinimumHeight`` and ``CategoryHeaderConfiguration/effectiveHeaderHeight``. The view controller uses the resolved height automatically, so non-zero ``CategoryHeaderConfiguration/sectionInsets`` and larger pill content insets do not clip the category tabs when `headerHeight` is configured too small.
 
-Category tab cells self-size to their title text horizontally and preserve their intrinsic content height vertically. ``CategoryItemCollectionView`` reads SwiftUI safe-area insets so the header starts below transparent navigation toolbars.
+Category tab cells self-size to their title text horizontally and preserve their intrinsic content height vertically. When embedded in SwiftUI, the header starts at the top of the allocated view area; apply any top spacing from the host layout if needed.
 
 Cache ``CategoryHeaderConfiguration`` (or other configuration values) instead of recreating them on every SwiftUI update so the header is not reloaded unnecessarily.
 

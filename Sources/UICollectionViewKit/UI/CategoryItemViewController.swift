@@ -20,8 +20,6 @@ public final class CategoryItemViewController<
     private let gridView = ItemGridCollectionView<I>()
     private let customContentContainer = UIView()
     private var headerHeightConstraint: NSLayoutConstraint?
-    private var headerTopConstraint: NSLayoutConstraint?
-    private var swiftUITopSafeAreaInset: CGFloat?
 
     private let itemProvider: Provider
     private let pageSize: Int
@@ -66,7 +64,6 @@ public final class CategoryItemViewController<
         self.onItemSelected = onItemSelected
         self.selectedCategoryID = leadingCategorySlot?.category.categoryID ?? categories.first?.categoryID
         super.init(nibName: nil, bundle: nil)
-        edgesForExtendedLayout = []
     }
 
     @available(*, unavailable)
@@ -84,7 +81,6 @@ public final class CategoryItemViewController<
 
     public override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        updateHeaderTopInset()
         updateHeaderHeightIfNeeded()
 
         let headerWidth = headerView.bounds.width
@@ -92,16 +88,6 @@ public final class CategoryItemViewController<
 
         lastLaidOutHeaderWidth = headerWidth
         headerView.invalidateCategoryItemLayout()
-    }
-
-    public override func viewSafeAreaInsetsDidChange() {
-        super.viewSafeAreaInsetsDidChange()
-        updateHeaderTopInset()
-    }
-
-    public func setHeaderTopInset(_ inset: CGFloat?) {
-        swiftUITopSafeAreaInset = inset
-        updateHeaderTopInset()
     }
 
     public func update(categories: [C]) {
@@ -242,14 +228,8 @@ public final class CategoryItemViewController<
         )
         self.headerHeightConstraint = headerHeightConstraint
 
-        let headerTopConstraint = headerView.topAnchor.constraint(
-            equalTo: view.topAnchor,
-            constant: resolvedHeaderTopInset()
-        )
-        self.headerTopConstraint = headerTopConstraint
-
         NSLayoutConstraint.activate([
-            headerTopConstraint,
+            headerView.topAnchor.constraint(equalTo: view.topAnchor),
             headerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             headerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             headerHeightConstraint,
@@ -471,19 +451,8 @@ public final class CategoryItemViewController<
         return true
     }
 
-    private func resolvedHeaderTopInset() -> CGFloat {
-        if let swiftUITopSafeAreaInset, swiftUITopSafeAreaInset > 0 {
-            return swiftUITopSafeAreaInset
-        }
-        return view.safeAreaInsets.top
-    }
-
     private func resolvedHeaderHeight() -> CGFloat {
         headerView.resolvedHeight(for: headerConfiguration)
-    }
-
-    private func updateHeaderTopInset() {
-        headerTopConstraint?.constant = resolvedHeaderTopInset()
     }
 
     private func updateHeaderHeightIfNeeded() {
@@ -499,7 +468,6 @@ extension CategoryItemViewController {
     var test_customContentContainer: UIView { customContentContainer }
     var test_headerView: CategoryHeaderView<C> { headerView }
     var test_headerHeightConstraint: NSLayoutConstraint? { headerHeightConstraint }
-    var test_headerTopConstraint: NSLayoutConstraint? { headerTopConstraint }
 
     func test_selectCategory(at index: Int) {
         headerView.selectCategory(at: index)

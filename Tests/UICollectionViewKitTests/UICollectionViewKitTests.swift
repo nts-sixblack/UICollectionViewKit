@@ -380,7 +380,7 @@ final class UICollectionViewKitTests: XCTestCase {
     }
 
     @MainActor
-    func testViewControllerAppliesSwiftUITopSafeAreaInset() {
+    func testViewControllerPinsHeaderToViewTop() {
         struct TestCategory: CategoryDisplayable, Hashable {
             let categoryID: String
             let categoryTitle: String
@@ -398,10 +398,68 @@ final class UICollectionViewKitTests: XCTestCase {
             itemProvider: TestProvider(),
             pageSize: 10
         )
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 320, height: 480))
+        window.rootViewController = viewController
+        window.makeKeyAndVisible()
         viewController.loadViewIfNeeded()
-        viewController.setHeaderTopInset(59)
+        viewController.view.layoutIfNeeded()
 
-        XCTAssertEqual(viewController.test_headerTopConstraint?.constant, 59)
+        XCTAssertEqual(viewController.test_headerView.frame.minY, 0, accuracy: 0.5)
+    }
+
+    @MainActor
+    func testHeaderFlowLayoutItemHeightFitsWithinHeaderBounds() {
+        struct TestCategory: CategoryDisplayable, Hashable {
+            let categoryID: String
+            let categoryTitle: String
+        }
+
+        var configuration = CategoryHeaderConfiguration.default
+        configuration.sectionInsets = NSDirectionalEdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16)
+        configuration.normalStyle = CategoryItemStyle(
+            backgroundColor: .white,
+            borderColor: .clear,
+            textColor: .black,
+            font: .systemFont(ofSize: 16, weight: .regular),
+            cornerRadius: 16,
+            borderWidth: 0,
+            contentInsets: NSDirectionalEdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12)
+        )
+        configuration.selectedStyle = CategoryItemStyle(
+            backgroundColor: .systemPink,
+            borderColor: .clear,
+            textColor: .white,
+            font: .systemFont(ofSize: 16, weight: .semibold),
+            cornerRadius: 16,
+            borderWidth: 0,
+            contentInsets: NSDirectionalEdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12)
+        )
+        configuration.headerHeight = 52
+
+        let headerView = CategoryHeaderView<TestCategory>(frame: CGRect(x: 0, y: 0, width: 320, height: 52))
+        headerView.applyConfiguration(configuration)
+        headerView.apply(
+            categories: [TestCategory(categoryID: "aesthetic", categoryTitle: "Aesthetic")],
+            selectedCategoryID: "aesthetic"
+        )
+
+        let resolvedHeight = headerView.resolvedHeight(for: configuration)
+        headerView.frame.size.height = resolvedHeight
+        headerView.layoutIfNeeded()
+
+        guard let collectionView = headerView.subviews.first as? UICollectionView,
+              let layout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout
+        else {
+            XCTFail("Expected flow layout collection view")
+            return
+        }
+
+        let itemHeight = headerView.resolvedCategoryItemHeight(for: configuration)
+        let availableRowHeight = resolvedHeight
+            - layout.sectionInset.top
+            - layout.sectionInset.bottom
+
+        XCTAssertGreaterThanOrEqual(availableRowHeight, itemHeight)
     }
 
     @MainActor

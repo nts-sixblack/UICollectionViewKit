@@ -1,7 +1,7 @@
 import UIKit
 
 @MainActor
-final class CategoryHeaderView<C: CategoryDisplayable>: UIView, UICollectionViewDelegate {
+final class CategoryHeaderView<C: CategoryDisplayable>: UIView, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
     typealias DataSource = UICollectionViewDiffableDataSource<Int, C>
     typealias Snapshot = NSDiffableDataSourceSnapshot<Int, C>
 
@@ -98,13 +98,15 @@ final class CategoryHeaderView<C: CategoryDisplayable>: UIView, UICollectionView
     }
 
     func resolvedHeight(for configuration: CategoryHeaderConfiguration) -> CGFloat {
-        let measuredPillHeight = [configuration.normalStyle, configuration.selectedStyle]
+        configuration.effectiveHeaderHeight(
+            measuredPillHeight: resolvedCategoryItemHeight(for: configuration)
+        )
+    }
+
+    func resolvedCategoryItemHeight(for configuration: CategoryHeaderConfiguration) -> CGFloat {
+        [configuration.normalStyle, configuration.selectedStyle]
             .map { CategoryCell.measuredContentHeight(style: $0) }
             .max() ?? 0
-        let minimumHeight = configuration.sectionInsets.top
-            + measuredPillHeight
-            + configuration.sectionInsets.bottom
-        return max(configuration.headerHeight, minimumHeight)
     }
 
     func updateSelection(selectedCategoryID: String) {
@@ -116,6 +118,22 @@ final class CategoryHeaderView<C: CategoryDisplayable>: UIView, UICollectionView
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         selectCategory(at: indexPath.item)
+    }
+
+    func collectionView(
+        _ collectionView: UICollectionView,
+        layout collectionViewLayout: UICollectionViewLayout,
+        sizeForItemAt indexPath: IndexPath
+    ) -> CGSize {
+        guard indexPath.item < categories.count else { return .zero }
+
+        let category = categories[indexPath.item]
+        let isSelected = category.categoryID == selectedCategoryID
+        let style = isSelected ? configuration.selectedStyle : configuration.normalStyle
+        let measuredSize = CategoryCell.measuredContentSize(title: category.categoryTitle, style: style)
+        let height = resolvedCategoryItemHeight(for: configuration)
+
+        return CGSize(width: measuredSize.width, height: height)
     }
 
     func selectCategory(at index: Int) {

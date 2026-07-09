@@ -36,7 +36,19 @@ extension CategoryHeaderConfiguration {
 
     /// Resolved header height honoring the configured value and content requirements.
     public var effectiveHeaderHeight: CGFloat {
-        max(headerHeight, recommendedMinimumHeight)
+        effectiveHeaderHeight(measuredPillHeight: nil)
+    }
+
+    /// Resolved header height using a measured pill height when available.
+    func effectiveHeaderHeight(measuredPillHeight: CGFloat?) -> CGFloat {
+        if let measuredPillHeight {
+            let minimumHeight = sectionInsets.top
+                + measuredPillHeight
+                + sectionInsets.bottom
+                + CategoryHeaderMetrics.layoutSafetyMargin
+            return max(headerHeight, minimumHeight)
+        }
+        return max(headerHeight, recommendedMinimumHeight)
     }
 
     public static let `default` = CategoryHeaderConfiguration(

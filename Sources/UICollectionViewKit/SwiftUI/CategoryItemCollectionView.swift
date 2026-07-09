@@ -46,22 +46,19 @@ public struct CategoryItemCollectionView<
     }
 
     public var body: some View {
-        GeometryReader { geometry in
-            CategoryItemCollectionViewRepresentable(
-                categories: categories,
-                itemProvider: itemProvider,
-                pageSize: pageSize,
-                leadingCategory: leadingCategory,
-                leadingCategoryContent: leadingCategoryContent,
-                headerConfiguration: headerConfiguration,
-                gridConfiguration: gridConfiguration,
-                backgroundConfiguration: backgroundConfiguration,
-                itemOverlayConfiguration: itemOverlayConfiguration,
-                onCategorySelected: onCategorySelected,
-                onItemSelected: onItemSelected,
-                topSafeAreaInset: geometry.safeAreaInsets.top
-            )
-        }
+        CategoryItemCollectionViewRepresentable(
+            categories: categories,
+            itemProvider: itemProvider,
+            pageSize: pageSize,
+            leadingCategory: leadingCategory,
+            leadingCategoryContent: leadingCategoryContent,
+            headerConfiguration: headerConfiguration,
+            gridConfiguration: gridConfiguration,
+            backgroundConfiguration: backgroundConfiguration,
+            itemOverlayConfiguration: itemOverlayConfiguration,
+            onCategorySelected: onCategorySelected,
+            onItemSelected: onItemSelected
+        )
     }
 }
 
@@ -82,7 +79,6 @@ private struct CategoryItemCollectionViewRepresentable<
     let itemOverlayConfiguration: ItemOverlayConfiguration<I>?
     let onCategorySelected: ((C) -> Void)?
     let onItemSelected: ((I) -> Void)?
-    let topSafeAreaInset: CGFloat
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -102,7 +98,6 @@ private struct CategoryItemCollectionViewRepresentable<
             onCategorySelected: onCategorySelected,
             onItemSelected: onItemSelected
         )
-        viewController.setHeaderTopInset(topSafeAreaInset)
         context.coordinator.viewController = viewController
         return viewController
     }
@@ -111,7 +106,6 @@ private struct CategoryItemCollectionViewRepresentable<
         context.coordinator.viewController = viewController
         context.coordinator.updateLeadingContent(leadingCategoryContent)
 
-        viewController.setHeaderTopInset(topSafeAreaInset)
         viewController.update(categories: categories)
         viewController.updateLeadingCategorySlot(makeLeadingSlot(coordinator: context.coordinator))
 

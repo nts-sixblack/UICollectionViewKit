@@ -44,21 +44,28 @@ final class CategoryCell: UICollectionViewCell {
     }
 
     @MainActor
-    static func measuredContentHeight(title: String = CategoryHeaderMetrics.sizingSampleText, style: CategoryItemStyle) -> CGFloat {
+    static func measuredContentSize(
+        title: String = CategoryHeaderMetrics.sizingSampleText,
+        style: CategoryItemStyle
+    ) -> CGSize {
         let cell = CategoryCell(frame: CGRect(x: 0, y: 0, width: 10, height: 1))
         cell.configure(title: title, style: style)
         cell.contentView.setNeedsLayout()
         cell.contentView.layoutIfNeeded()
-        return ceil(
-            cell.contentView.systemLayoutSizeFitting(
-                CGSize(
-                    width: UIView.layoutFittingCompressedSize.width,
-                    height: UIView.layoutFittingExpandedSize.height
-                ),
-                withHorizontalFittingPriority: .fittingSizeLevel,
-                verticalFittingPriority: .fittingSizeLevel
-            ).height
+        let fittedSize = cell.contentView.systemLayoutSizeFitting(
+            CGSize(
+                width: UIView.layoutFittingCompressedSize.width,
+                height: UIView.layoutFittingExpandedSize.height
+            ),
+            withHorizontalFittingPriority: .fittingSizeLevel,
+            verticalFittingPriority: .fittingSizeLevel
         )
+        return CGSize(width: ceil(fittedSize.width), height: ceil(fittedSize.height))
+    }
+
+    @MainActor
+    static func measuredContentHeight(title: String = CategoryHeaderMetrics.sizingSampleText, style: CategoryItemStyle) -> CGFloat {
+        measuredContentSize(title: title, style: style).height
     }
 
     func configure(title: String, style: CategoryItemStyle) {
